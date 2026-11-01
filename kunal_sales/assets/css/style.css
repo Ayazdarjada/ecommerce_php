@@ -1,0 +1,306 @@
+/* =====================================================
+   BRAND VARIABLES
+===================================================== */
+:root{
+  --dark:#0F172A;
+  --blue:#0284C7;
+  --green:#22C55E;
+  --light:#F8FAFC;
+  --gray:#CBD5E1;
+}
+
+/* =====================================================
+   GLOBAL RESET
+===================================================== */
+*{
+  box-sizing:border-box;
+  font-family:'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body{
+  margin:0;
+  background:var(--light);
+  color:#111;
+}
+
+a{ text-decoration:none; }
+
+/* =====================================================
+   ================= USER SIDE =================
+===================================================== */
+
+/* HEADER */
+.top-header{
+  background:linear-gradient(135deg, var(--dark), #020617);
+  padding:15px 40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.logo{
+  color:#fff;
+  font-size:22px;
+  font-weight:700;
+}
+
+.logo span{ color:var(--green); }
+
+nav a{
+  color:#fff;
+  margin-left:20px;
+  font-size:15px;
+}
+
+nav a:hover{ color:var(--green); }
+
+/* HERO */
+.hero{
+  background:linear-gradient(135deg,var(--blue),var(--dark));
+  color:#fff;
+  padding:90px 20px;
+  text-align:center;
+}
+
+.hero-btn{
+  background:var(--green);
+  color:#fff;
+  padding:12px 32px;
+  border-radius:30px;
+}
+
+/* =====================================================
+   AUTH (LOGIN / REGISTER)
+===================================================== */
+.auth-container{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,var(--blue),var(--dark));
+}
+
+.auth-card{
+  background:#fff;
+  width:100%;
+  max-width:400px;
+  padding:40px;
+  border-radius:18px;
+  box-shadow:0 25px 45px rgba(0,0,0,0.2);
+}
+
+.auth-card h2{
+  margin-bottom:20px;
+  font-weight:700;
+}
+
+/* =====================================================
+   ================= ADMIN PANEL =================
+===================================================== */
+
+/* LAYOUT */
+.admin-wrapper{
+  display:flex;
+  min-height:100vh;
+  background:#f1f5f9;
+}
+
+/* SIDEBAR */
+.admin-sidebar{
+  width:230px;
+  background:#020617;
+  color:#fff;
+  position:fixed;
+  top:0;
+  left:0;
+  bottom:0;
+  padding-top:25px;
+}
+
+.admin-sidebar h4{
+  text-align:center;
+  margin-bottom:30px;
+  font-weight:700;
+}
+
+.admin-sidebar a{
+  display:block;
+  padding:14px 25px;
+  color:#cbd5e1;
+  font-size:15px;
+}
+
+.admin-sidebar a:hover,
+.admin-sidebar a.active{
+  background:var(--blue);
+  color:#fff;
+}
+
+/* TOPBAR */
+.admin-topbar{
+  height:60px;
+  background:#020617;
+  position:fixed;
+  top:0;
+  left:230px;
+  right:0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 25px;
+  color:#fff;
+  z-index:100;
+}
+
+/* CONTENT */
+.admin-content{
+  margin-left:230px;
+  margin-top:60px;
+  padding:40px;
+  background:#f8fafc;
+  min-height:calc(100vh - 60px);
+}
+
+/* DASHBOARD CARDS */
+.stat-card{
+  background:#fff;
+  padding:30px;
+  border-radius:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+  text-align:center;
+}
+
+.stat-card h5{
+  font-size:15px;
+  color:#64748b;
+}
+
+.stat-card h2{
+  font-size:34px;
+  margin:0;
+  color:var(--dark);
+}
+
+/* =====================================================
+   TABLES (MANAGE PRODUCTS + ORDERS)
+===================================================== */
+.table tbody tr{
+  background:#fff;
+}
+
+/* SAME WIDTH FOR ALL ADMIN TABLES */
+.admin-table-wrapper{
+  width:100%;
+  max-width:1200px;
+  margin-top:25px;
+}
+
+/* TABLE CARD */
+.admin-table-wrapper .card{
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* TABLE */
+.table{
+  width:100%;
+  margin:0;
+  border-collapse:collapse;
+}
+
+/* TABLE HEADER */
+.table thead th{
+  background:#0F172A;
+  color:#fff;
+  padding:16px 20px;
+  font-size:14px;
+  text-align:left;
+}
+
+/* TABLE BODY */
+.table tbody td{
+  padding:16px 20px;
+  font-size:15px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.table tbody tr:hover{
+  background:#f1f5f9;
+}
+
+/* EMPTY ROW */
+.table td.text-muted{
+  padding:40px 0;
+  font-size:15px;
+  text-align:center;
+}
+/* DELETE BUTTON */
+.btn-delete{
+  background:#dc2626;
+  border:none;
+  padding:6px 14px;
+  border-radius:8px;
+  color:#fff;
+  font-size:14px;
+  cursor:pointer;
+  text-decoration:none;
+}
+
+/* ROW HOVER EFFECT */
+.table tbody tr{
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.table tbody tr:hover{
+  background:#020617;
+  transform: scale(1.01);
+}
+
+/* PARTICLE DOTS */
+.particle{
+  position:fixed;
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  pointer-events:none;
+  animation: fly 1.8s ease-out forwards;
+  z-index:9999;
+  background: var(--c);
+}
+
+@keyframes fly{
+  to{
+    transform: translate(var(--x), var(--y)) scale(0);
+    opacity:0;
+  }
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+.footer{
+  background:var(--dark);
+  color:#fff;
+  text-align:center;
+  padding:18px;
+  margin-top:60px;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media(max-width:992px){
+  .admin-sidebar{
+    position:relative;
+    width:100%;
+  }
+
+  .admin-topbar{
+    left:0;
+  }
+
+  .admin-content{
+    margin-left:0;
+  }
+}
