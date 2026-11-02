@@ -3,7 +3,11 @@ include '../header.php';
 include '../config/db.php';
 
 $product_id = (int)($_GET['id'] ?? 0);
-$stmt = mysqli_prepare($conn, "SELECT * FROM products WHERE product_id = ?");
+$stmt = mysqli_prepare($conn, "SELECT p.* FROM products p
+    INNER JOIN categories c ON c.category_id = p.category_id
+    WHERE p.product_id = ? AND c.status = 1
+      AND (LOWER(c.category_name) LIKE '%inverter%' OR LOWER(c.category_name) LIKE '%battery%'
+        OR LOWER(c.category_name) LIKE '%ro%' OR LOWER(c.category_name) LIKE '%water%')");
 mysqli_stmt_bind_param($stmt, 'i', $product_id);
 mysqli_stmt_execute($stmt);
 $p = mysqli_stmt_get_result($stmt)->fetch_assoc();
