@@ -40,3 +40,11 @@ a{text-decoration:none}
 .footer{background:#040A15;border-top:1px solid var(--admin-line);color:var(--admin-muted);padding:22px;text-align:center}
 @media(max-width:850px){.admin-wrapper{display:block}.admin-sidebar{position:relative;width:100%;inset:auto;padding:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.admin-sidebar h4{width:100%;padding:0 8px 12px;margin:0 0 8px}.admin-sidebar a{padding:9px 11px;margin:0;font-size:12px}.admin-wrapper>div[style*="flex:1"]{width:100%;margin-left:0}.admin-topbar{height:60px;padding:0 18px}.admin-content{padding:24px 16px;min-height:calc(100vh - 60px)}}
 @media(max-width:520px){.admin-sidebar{gap:5px}.admin-sidebar a{font-size:11px;padding:8px}.admin-content h2{font-size:23px}.stat-card{padding:18px}.table thead th,.table tbody td{padding:11px 12px}}
+
+/* Admin sign-in page */
+.admin-login-wrapper{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;background:radial-gradient(circle at 15% 15%,rgba(33,217,245,.15),transparent 30%),radial-gradient(circle at 90% 85%,rgba(154,104,255,.16),transparent 30%),var(--admin-bg)}
+.auth-card{width:100%;max-width:440px;padding:clamp(26px,5vw,40px);border:1px solid rgba(91,169,245,.25);border-radius:25px;background:linear-gradient(145deg,rgba(16,35,61,.98),rgba(8,20,37,.98));box-shadow:0 30px 90px rgba(0,0,0,.45),0 0 35px rgba(33,217,245,.08);color:var(--admin-text)}
+.auth-card h2{font:700 29px/1.2 'Space Grotesk';color:#fff;text-align:center}
+.auth-card .eyebrow{display:block;text-align:center;color:var(--admin-cyan);font-size:11px;font-weight:700;letter-spacing:2px}
+.auth-card .form-control{margin-bottom:15px}
+.auth-card .btn{width:100%;padding:12px}
