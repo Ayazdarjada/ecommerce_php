@@ -1,11 +1,23 @@
 <?php
 require_once __DIR__ . '/config/csrf.php';
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 /* Auto base path detection */
 $basePath = '';
 $path = $_SERVER['PHP_SELF'];
 if (preg_match('#/(auth|pages|cart|admin)/#', $path)) {
     $basePath = '../';
+}
+
+$cartCount = 0;
+if (isset($_SESSION['user_id'])) {
+    include_once __DIR__ . '/config/db.php';
+    $stmt = mysqli_prepare($conn, "SELECT SUM(quantity) FROM cart WHERE user_id = ?");
+    mysqli_stmt_bind_param($stmt, 'i', $_SESSION['user_id']);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    $row = mysqli_fetch_array($res);
+    $cartCount = $row[0] ?? 0;
 }
 ?>
 <!DOCTYPE html>
@@ -28,7 +40,7 @@ if (preg_match('#/(auth|pages|cart|admin)/#', $path)) {
         <nav class="main-nav">
             <a href="<?php echo $basePath; ?>index.php">Home</a>
             <a href="<?php echo $basePath; ?>pages/products.php">Products</a>
-            <a href="<?php echo $basePath; ?>cart/view_cart.php">Cart</a>
+            <a href="<?php echo $basePath; ?>cart/view_cart.php">Cart <span class="badge bg-primary"><?= (int)$cartCount ?></span></a>
             <?php if (!isset($_SESSION['user_id'])) { ?>
                 <a href="<?php echo $basePath; ?>auth/login.php" class="nav-cta">Login</a>
             <?php } else { ?>

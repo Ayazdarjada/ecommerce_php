@@ -21,11 +21,6 @@ mysqli_stmt_bind_param($stmt, 'i', $user_id);
 mysqli_stmt_execute($stmt);
 $q = mysqli_stmt_get_result($stmt);
 
-/* ❌ If query fails */
-if (!$q) {
-    die("Cart Query Failed: " . mysqli_error($conn));
-}
-
 $total = 0;
 ?>
 
@@ -46,11 +41,19 @@ $total = 0;
             <div class="cart-item">
               <div class="cart-item-info">
                 <strong><?php echo htmlspecialchars($c['product_name']); ?></strong>
-                <p>Qty: <?php echo htmlspecialchars($c['quantity']); ?></p>
               </div>
               <div class="cart-price">
                 ₹<?php echo htmlspecialchars($subtotal); ?>
               </div>
+              
+              <form action="update_cart.php" method="POST" class="cart-actions">
+                  <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+                  <input type="hidden" name="id" value="<?= (int)$c['product_id'] ?>">
+                  <button type="submit" name="action" value="decrease">-</button>
+                  <span>Qty: <?= (int)$c['quantity'] ?></span>
+                  <button type="submit" name="action" value="increase">+</button>
+                  <button type="submit" name="action" value="remove" class="btn btn-danger btn-sm">Remove</button>
+              </form>
             </div>
         <?php } ?>
 

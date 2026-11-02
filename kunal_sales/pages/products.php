@@ -2,42 +2,62 @@
 include '../header.php';
 include '../config/db.php';
 
-$category_id = isset($_GET['category']) ? (int)$_GET['category'] : null;
+$sql = "SELECT * FROM products WHERE 1=1";
+$params = [];
+$types = "";
 
-if ($category_id) {
-    $stmt = mysqli_prepare($conn, "SELECT * FROM products WHERE category_id = ?");
-    mysqli_stmt_bind_param($stmt, 'i', $category_id);
-    mysqli_stmt_execute($stmt);
-    $q = mysqli_stmt_get_result($stmt);
-} else {
-    $q = mysqli_query($conn, "SELECT * FROM products");
+if (!empty($_GET['search'])) {
+    $sql .= " AND (product_name LIKE ? OR brand LIKE ?)";
+    $search = "%" . $_GET['search'] . "%";
+    $params[] = $search; $params[] = $search;
+    $types .= "ss";
 }
+if (!empty($_GET['category'])) {
+    $sql .= " AND category_id = ?";
+    $params[] = (int)$_GET['category'];
+    $types .= "i";
+}
+if (!empty($_GET['brand'])) {
+    $sql .= " AND brand = ?";
+    $params[] = $_GET['brand'];
+    $types .= "s";
+}
+if (!empty($_GET['sort'])) {
+    $sql .= ($_GET['sort'] === 'high') ? " ORDER BY price DESC" : " ORDER BY price ASC";
+}
+
+$stmt = mysqli_prepare($conn, $sql);
+if (!empty($params)) {
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+}
+mysqli_stmt_execute($stmt);
+$q = mysqli_stmt_get_result($stmt);
 ?>
 
-<section class="products-section">
-  <div class="product-grid">
+<div class="container mt-4">
+    <form method="GET" class="row g-3 mb-4">
+        <div class="col-md-3"><input type="text" name="search" class="form-control" placeholder="Search products..."></div>
+        <div class="col-md-2"><input type="text" name="brand" class="form-control" placeholder="Brand"></div>
+        <div class="col-md-2">
+            <select name="sort" class="form-select">
+                <option value="">Sort by Price</option>
+                <option value="low">Low to High</option>
+                <option value="high">High to Low</option>
+            </select>
+        </div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary">Filter</button></div>
+    </form>
 
-  <?php while ($p = mysqli_fetch_assoc($q)) { ?>
-    <div class="product-card">
-
-      <img src="../uploads/<?php echo htmlspecialchars($p['image']); ?>"
-     alt="<?php echo htmlspecialchars($p['product_name']); ?>"
-     class="product-img">
-
-      <h3><?php echo htmlspecialchars($p['product_name']); ?></h3>
-
-      <div class="price">₹<?php echo htmlspecialchars($p['price']); ?></div>
-
-      <form action="../cart/add_to_cart.php" method="POST">
-        <input type="hidden" name="id" value="<?php echo (int)$p['product_id']; ?>">
-        <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
-        <button type="submit" class="add-btn">Add to Cart</button>
-      </form>
-
+    <div class="product-grid">
+    <?php while ($p = mysqli_fetch_assoc($q)) { ?>
+        <div class="product-card">
+            <a href="product.php?id=<?= (int)$p['product_id'] ?>">
+                <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
+                <h3><?= htmlspecialchars($p['product_name']) ?></h3>
+            </a>
+            <p>Price: ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
+        </div>
+    <?php } ?>
     </div>
-  <?php } ?>
-
-  </div>
-</section>
-
+</div>
 <?php include '../footer.php'; ?>
