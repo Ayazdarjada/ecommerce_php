@@ -9,7 +9,7 @@ $categories = mysqli_query($conn, "
       AND (
         LOWER(category_name) LIKE '%inverter%'
         OR LOWER(category_name) LIKE '%battery%'
-        OR LOWER(category_name) LIKE '%ro%'
+        OR (LOWER(TRIM(category_name)) = 'ro' OR LOWER(TRIM(category_name)) LIKE 'ro %' OR LOWER(TRIM(category_name)) LIKE '% ro' OR LOWER(TRIM(category_name)) LIKE '%ro system%' OR LOWER(TRIM(category_name)) LIKE '%water purifier%' OR LOWER(TRIM(category_name)) = 'water' OR LOWER(TRIM(category_name)) LIKE '%water system%')
         OR LOWER(category_name) LIKE '%water%'
       )
     ORDER BY category_id ASC
