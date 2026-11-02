@@ -35,10 +35,11 @@ $q = mysqli_query($conn,"
 
               <!-- ✅ DELETE BUTTON -->
               <td>
-              <a href="delete_order.php?id=<?= $o['order_id'] ?>"
+              <a href="#"
    class="btn-delete"
    data-id="<?= $o['order_id'] ?>"
    data-url="delete_order.php"
+   data-csrf="<?= generateToken() ?>"
    onclick="return breakRow(this)">
    Delete
 </a>

@@ -3,11 +3,13 @@ require 'admin_auth.php';
 include '../config/db.php';
 include 'admin_header.php';
 
-$q=mysqli_query($conn,"
-SELECT orders.*, users.name 
-FROM orders 
-JOIN users ON orders.user_id = users.user_id
+$stmt = mysqli_prepare($conn, "
+    SELECT orders.*, users.name 
+    FROM orders 
+    JOIN users ON orders.user_id = users.user_id
 ");
+mysqli_stmt_execute($stmt);
+$q = mysqli_stmt_get_result($stmt);
 ?>
 
 <div class="admin-content">
@@ -26,10 +28,10 @@ JOIN users ON orders.user_id = users.user_id
 <tbody>
 <?php while($o=mysqli_fetch_assoc($q)){ ?>
 <tr>
-    <td><?php echo $o['order_id']; ?></td>
-    <td><?php echo $o['name']; ?></td>
-    <td>₹<?php echo $o['total_amount']; ?></td>
-    <td><?php echo $o['order_date']; ?></td>
+    <td><?php echo (int)$o['order_id']; ?></td>
+    <td><?php echo htmlspecialchars($o['name']); ?></td>
+    <td>₹<?php echo htmlspecialchars(number_format($o['total_amount'], 2)); ?></td>
+    <td><?php echo htmlspecialchars($o['order_date']); ?></td>
 </tr>
 <?php } ?>
 </tbody>

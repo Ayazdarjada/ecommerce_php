@@ -2,9 +2,16 @@
 include '../header.php';
 include '../config/db.php';
 
-// Assuming category_id 1 = Inverter
+// Lookup category_id by name
+$stmt = mysqli_prepare($conn, "SELECT category_id FROM categories WHERE category_name = ?");
+$cat_name = 'Inverter';
+mysqli_stmt_bind_param($stmt, 's', $cat_name);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+$row = mysqli_fetch_assoc($res);
+$cat_id = $row ? $row['category_id'] : 0;
+
 $stmt = mysqli_prepare($conn, "SELECT * FROM products WHERE category_id = ?");
-$cat_id = 1;
 mysqli_stmt_bind_param($stmt, 'i', $cat_id);
 mysqli_stmt_execute($stmt);
 $q = mysqli_stmt_get_result($stmt);

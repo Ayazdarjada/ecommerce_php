@@ -1,0 +1,5 @@
+node_modules/
+package.json
+bun.lock
+kunal_sales/uploads/*
+!kunal_sales/uploads/.gitkeep

@@ -2,14 +2,13 @@
   </div>
 </div>
 <script>
-  
 function breakRow(btn){
-console.log("breakRow fired", btn);
-
+  if(!confirm('Are you sure?')) return false;
+  
   btn.classList.add("clicked");
-
   const id  = btn.dataset.id;
   const url = btn.dataset.url;
+  const csrf = btn.dataset.csrf;
 
   document.body.style.overflowY = "hidden";
 
@@ -61,17 +60,23 @@ console.log("breakRow fired", btn);
 
     document.body.style.overflowY = "";
 
-    /* 🔥 REAL DELETE (AJAX) */
-   // fetch(`${url}?id=${id}`, { method: "GET" })
-      .then(res => res.text())
-      .catch(() => alert("Delete failed"));
+    /* 🔥 REAL ACTION (POST) */
+    fetch(url, { 
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `id=${id}&csrf_token=${csrf}`
+    })
+    .then(res => {
+        if(!res.ok) alert("Action failed");
+    })
+    .catch(() => alert("Action failed"));
 
   }, 300);
 
   return false;
 }
 </script>
-
-
 </body>
 </html>

@@ -1,6 +1,7 @@
 <?php
 include 'admin_header.php';
 include '../config/db.php';
+include '../config/csrf.php';
 
 $q = mysqli_query($conn, "SELECT * FROM categories ORDER BY category_id DESC");
 ?>
@@ -23,7 +24,7 @@ $q = mysqli_query($conn, "SELECT * FROM categories ORDER BY category_id DESC");
         <?php if (mysqli_num_rows($q) > 0) { ?>
           <?php while ($c = mysqli_fetch_assoc($q)) { ?>
             <tr>
-              <td><?= $c['category_id'] ?></td>
+              <td><?= (int)$c['category_id'] ?></td>
               <td><?= htmlspecialchars($c['category_name']) ?></td>
               <td>
                 <?= $c['status'] 
@@ -31,14 +32,20 @@ $q = mysqli_query($conn, "SELECT * FROM categories ORDER BY category_id DESC");
                     : '<span class="badge bg-secondary">Deactive</span>' ?>
               </td>
               <td>
-                <a href="toggle_category.php?id=<?= $c['category_id'] ?>"
-                   class="btn btn-sm btn-warning">
-                  Toggle
-                </a>
+                <!-- Toggle Form -->
+                <form action="toggle_category.php" method="POST" style="display:inline;">
+                    <input type="hidden" name="id" value="<?= (int)$c['category_id'] ?>">
+                    <input type="hidden" name="csrf_token" value="<?= generateToken() ?>">
+                    <button type="submit" class="btn btn-sm btn-warning">Toggle</button>
+                </form>
 
-                <a href="delete_category.php?id=<?= $c['category_id'] ?>"
-                   class="btn btn-sm btn-danger"
-                   onclick="return confirm('Delete category?')">
+                <!-- Delete Button (breakRow) -->
+                <a href="#"
+                   class="btn btn-sm btn-danger btn-delete"
+                   data-id="<?= (int)$c['category_id'] ?>"
+                   data-url="delete_category.php"
+                   data-csrf="<?= generateToken() ?>"
+                   onclick="return breakRow(this)">
                   Delete
                 </a>
               </td>

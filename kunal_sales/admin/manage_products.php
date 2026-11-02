@@ -1,6 +1,7 @@
 <?php
 include 'admin_header.php';
 include '../config/db.php';
+include '../config/csrf.php';
 
 $q = mysqli_query($conn, "SELECT * FROM products");
 ?>
@@ -24,18 +25,17 @@ $q = mysqli_query($conn, "SELECT * FROM products");
           <?php while($p = mysqli_fetch_assoc($q)){ ?>
             <tr>
               <td><?= htmlspecialchars($p['product_name']) ?></td>
-              <td><?= htmlspecialchars($p['category']) ?></td>
+              <td><?= htmlspecialchars($p['category_id']) ?></td> <!-- Simplified for now, should join categories -->
               <td>₹<?= number_format($p['price'], 2) ?></td>
               <td>
-             <a href="delete_product.php?id=<?= $p['product_id'] ?>"
-   class="btn-delete"
-   data-id="<?= $p['product_id'] ?>"
-   data-url="delete_product.php"
-   onclick="return breakRow(this)">
-   Delete
-</a>
-
-
+                <a href="#"
+                   class="btn btn-sm btn-danger btn-delete"
+                   data-id="<?= (int)$p['product_id'] ?>"
+                   data-url="delete_product.php"
+                   data-csrf="<?= generateToken() ?>"
+                   onclick="return breakRow(this)">
+                   Delete
+                </a>
               </td>
             </tr>
           <?php } ?>
@@ -52,4 +52,3 @@ $q = mysqli_query($conn, "SELECT * FROM products");
 </div>
 
 <?php include 'admin_footer.php'; ?>
-

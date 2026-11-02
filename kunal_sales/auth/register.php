@@ -1,27 +1,40 @@
 <?php
-session_start();
 include '../config/db.php';
+include '../header.php'; // Includes session and CSRF
 
 if (isset($_POST['register'])) {
+    if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+        die("CSRF token validation failed.");
+    }
+
     $name = $_POST['name'];
     $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $password = $_POST['password'];
 
-    $stmt = $conn->prepare(
-        "INSERT INTO users (name,email,password) VALUES (?,?,?)"
-    );
-    $stmt->bind_param("sss", $name, $email, $password);
-
-    if ($stmt->execute()) {
-        header("Location: login.php");
-        exit;
+    if (strlen($password) < 8) {
+        $error = "Password must be at least 8 characters long.";
     } else {
-        $error = "Registration failed";
+        // Check if email exists
+        $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            $error = "Email already registered.";
+        } else {
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?,?,?)");
+            $stmt->bind_param("sss", $name, $email, $hashed_password);
+
+            if ($stmt->execute()) {
+                header("Location: login.php");
+                exit;
+            } else {
+                $error = "Registration failed.";
+            }
+        }
     }
 }
 ?>
-
-<?php include '../header.php'; ?>
 
 <div class="auth-page">
   <div class="auth-glass">
@@ -30,13 +43,14 @@ if (isset($_POST['register'])) {
     <p class="auth-sub">Join Kunal Sales & Services</p>
 
     <?php if (isset($error)) { ?>
-      <div class="auth-error"><?php echo $error; ?></div>
+      <div class="auth-error"><?php echo htmlspecialchars($error); ?></div>
     <?php } ?>
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
       <input type="text" name="name" placeholder="Full name" required>
       <input type="email" name="email" placeholder="Email address" required>
-      <input type="password" name="password" placeholder="Password" required>
+      <input type="password" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
 
       <button type="submit" name="register" class="auth-btn">
         Register
