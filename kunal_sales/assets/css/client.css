@@ -130,3 +130,13 @@ button,a,input,select,textarea{ -webkit-tap-highlight-color:transparent}
 @media(max-width:760px){.header-inner{padding:13px 18px;align-items:flex-start;flex-direction:column;gap:12px}.main-nav{width:100%;gap:10px 16px}.main-nav a{font-size:12px}.hero-advanced{margin:14px 14px 0;min-height:560px;padding:48px 25px 220px;border-radius:25px}.hero-content h1{font-size:clamp(40px,10vw,58px);letter-spacing:-2px}.hero-content p{font-size:15px}.hero-visual{width:80%;height:220px;right:10%;top:auto;bottom:0;transform:none;opacity:.8}.hero-orbit{width:68%}.hero-product-art{height:80%}.section-shell{padding:55px 18px}.section-heading{align-items:flex-start;flex-direction:column}.categories{grid-template-columns:1fr;padding:8px 18px 50px}.categories .card{min-height:155px}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:20px 14px 50px}.product-card{padding:11px;border-radius:17px}.product-card img,.product-img{height:135px}.product-card h3{font-size:14px}.product-card .price,.price{font-size:17px}.hero-stats{gap:18px}.cart-item{align-items:flex-start;flex-direction:column}.auth-card{padding:27px 22px}}
 @media(max-width:420px){.product-grid{grid-template-columns:1fr}.product-card img,.product-img{height:190px}.hero-advanced{padding-bottom:205px}.brand-text{font-size:15px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+.product-detail{max-width:1180px;padding-top:25px;padding-bottom:35px}
+.product-detail-image{min-height:420px;padding:30px;display:grid;place-items:center;border-radius:28px;border:1px solid var(--line);background:radial-gradient(circle at 50% 35%,rgba(33,217,245,.13),transparent 60%),linear-gradient(145deg,#10233D,#071426);box-shadow:0 25px 65px rgba(0,0,0,.28)}
+.product-detail-image img{max-height:390px;width:100%;object-fit:contain}
+.product-detail-info{padding:clamp(20px,4vw,45px)}
+.product-detail-info h1{font:700 clamp(32px,4vw,48px)/1.1 'Space Grotesk';letter-spacing:-1.5px;margin:17px 0;color:#F5F8FF}
+.product-detail-info p{color:var(--muted);margin:12px 0}
+.product-detail-info p strong{color:#DDEBFA}
+.product-detail-price{font:700 30px 'Space Grotesk'!important;color:var(--cyan)!important}
+@media(max-width:767px){.product-detail-image{min-height:280px}.product-detail-image img{max-height:260px}}
