@@ -6,7 +6,7 @@ include '../config/csrf.php';
 /* FETCH ACTIVE CATEGORIES */
 $cat_q = mysqli_query($conn, "SELECT category_id, category_name FROM categories WHERE status = 1
     AND (LOWER(category_name) LIKE '%inverter%' OR LOWER(category_name) LIKE '%battery%'
-    OR LOWER(category_name) LIKE '%ro%' OR LOWER(category_name) LIKE '%water%')
+    OR (LOWER(TRIM(category_name)) = 'ro' OR LOWER(TRIM(category_name)) LIKE 'ro %' OR LOWER(TRIM(category_name)) LIKE '% ro' OR LOWER(TRIM(category_name)) LIKE '%ro system%' OR LOWER(TRIM(category_name)) LIKE '%water purifier%' OR LOWER(TRIM(category_name)) = 'water' OR LOWER(TRIM(category_name)) LIKE '%water system%') OR LOWER(category_name) LIKE '%water%')
     ORDER BY category_name ASC");
 
 if (isset($_POST['add_product'])) {
