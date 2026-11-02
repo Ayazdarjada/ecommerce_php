@@ -12,9 +12,17 @@ $product_id = (int)$_POST['id'];
 $action = $_POST['action']; // 'increase', 'decrease', 'remove'
 
 if ($action === 'increase') {
-    $stmt = mysqli_prepare($conn, "UPDATE cart SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?");
+    // Check stock
+    $stmt = mysqli_prepare($conn, "SELECT c.quantity, p.stock FROM cart c JOIN products p ON c.product_id = p.product_id WHERE c.user_id = ? AND c.product_id = ?");
     mysqli_stmt_bind_param($stmt, 'ii', $user_id, $product_id);
     mysqli_stmt_execute($stmt);
+    $item = mysqli_stmt_get_result($stmt)->fetch_assoc();
+
+    if ($item && $item['quantity'] < $item['stock']) {
+        $stmt_upd = mysqli_prepare($conn, "UPDATE cart SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?");
+        mysqli_stmt_bind_param($stmt_upd, 'ii', $user_id, $product_id);
+        mysqli_stmt_execute($stmt_upd);
+    }
 } elseif ($action === 'decrease') {
     $stmt = mysqli_prepare($conn, "UPDATE cart SET quantity = quantity - 1 WHERE user_id = ? AND product_id = ? AND quantity > 1");
     mysqli_stmt_bind_param($stmt, 'ii', $user_id, $product_id);
