@@ -37,9 +37,7 @@ if (isset($_SESSION['user_id'])) {
         <nav class="main-nav" aria-label="Main navigation">
             <a href="<?= htmlspecialchars($basePath) ?>index.php">Home</a>
             <a href="<?= htmlspecialchars($basePath) ?>pages/products.php">Explore Products</a>
-            <a href="<?= htmlspecialchars($basePath) ?>pages/products.php?category=3">Inverters</a>
-            <a href="<?= htmlspecialchars($basePath) ?>pages/products.php?category=4">Batteries</a>
-            <a href="<?= htmlspecialchars($basePath) ?>pages/products.php?category=5">RO &amp; Water</a>
+            <a href="<?= htmlspecialchars($basePath) ?>pages/products.php">Power &amp; Water</a>
             <a href="<?= htmlspecialchars($basePath) ?>cart/view_cart.php">Cart <span class="badge rounded-pill"><?= $cartCount ?></span></a>
             <?php if (!isset($_SESSION['user_id'])): ?>
                 <a href="<?= htmlspecialchars($basePath) ?>auth/login.php" class="nav-cta">Sign in</a>
