@@ -40,7 +40,11 @@ if (isset($_SESSION['user_id'])) {
         <nav class="main-nav">
             <a href="<?php echo $basePath; ?>index.php">Home</a>
             <a href="<?php echo $basePath; ?>pages/products.php">Products</a>
-            <a href="<?php echo $basePath; ?>cart/view_cart.php">Cart <span class="badge bg-primary"><?= (int)$cartCount ?></span></a>
+            <a href="<?php echo $basePath; ?>cart/view_cart.php">Cart 
+                <?php if ($cartCount > 0): ?>
+                    <span class="badge bg-primary"><?= (int)$cartCount ?></span>
+                <?php endif; ?>
+            </a>
             <?php if (!isset($_SESSION['user_id'])) { ?>
                 <a href="<?php echo $basePath; ?>auth/login.php" class="nav-cta">Login</a>
             <?php } else { ?>

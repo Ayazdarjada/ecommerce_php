@@ -49,14 +49,18 @@ $q = mysqli_stmt_get_result($stmt);
     </form>
 
     <div class="product-grid">
-    <?php while ($p = mysqli_fetch_assoc($q)) { ?>
-        <div class="product-card">
-            <a href="product.php?id=<?= (int)$p['product_id'] ?>">
-                <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
-                <h3><?= htmlspecialchars($p['product_name']) ?></h3>
-            </a>
-            <p>Price: ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
-        </div>
+    <?php if (mysqli_num_rows($q) > 0) { ?>
+        <?php while ($p = mysqli_fetch_assoc($q)) { ?>
+            <div class="product-card">
+                <a href="product.php?id=<?= (int)$p['product_id'] ?>">
+                    <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
+                    <h3><?= htmlspecialchars($p['product_name']) ?></h3>
+                </a>
+                <p>Price: ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
+            </div>
+        <?php } ?>
+    <?php } else { ?>
+        <p class="text-center">No products found.</p>
     <?php } ?>
     </div>
 </div>
