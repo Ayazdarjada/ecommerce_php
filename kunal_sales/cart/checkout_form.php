@@ -1,12 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
 include '../header.php';
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../auth/login.php");
-    exit;
-}
 ?>
 
 <div class="container mt-5">
