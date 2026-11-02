@@ -7,7 +7,7 @@ $sql = "SELECT p.* FROM products p
         WHERE c.status = 1
           AND (LOWER(c.category_name) LIKE '%inverter%'
             OR LOWER(c.category_name) LIKE '%battery%'
-            OR LOWER(c.category_name) LIKE '%ro%'
+            OR (LOWER(TRIM(c.category_name)) = 'ro' OR LOWER(TRIM(c.category_name)) LIKE 'ro %' OR LOWER(TRIM(c.category_name)) LIKE '% ro' OR LOWER(TRIM(c.category_name)) LIKE '%ro system%' OR LOWER(TRIM(c.category_name)) LIKE '%water purifier%' OR LOWER(TRIM(c.category_name)) = 'water' OR LOWER(TRIM(c.category_name)) LIKE '%water system%')
             OR LOWER(c.category_name) LIKE '%water%')";
 $params = [];
 $types = "";
@@ -46,12 +46,12 @@ $q = mysqli_stmt_get_result($stmt);
 
 $cats = mysqli_query($conn, "SELECT category_id, category_name FROM categories
     WHERE status=1 AND (LOWER(category_name) LIKE '%inverter%' OR LOWER(category_name) LIKE '%battery%'
-    OR LOWER(category_name) LIKE '%ro%' OR LOWER(category_name) LIKE '%water%') ORDER BY category_name");
+    OR (LOWER(TRIM(category_name)) = 'ro' OR LOWER(TRIM(category_name)) LIKE 'ro %' OR LOWER(TRIM(category_name)) LIKE '% ro' OR LOWER(TRIM(category_name)) LIKE '%ro system%' OR LOWER(TRIM(category_name)) LIKE '%water purifier%' OR LOWER(TRIM(category_name)) = 'water' OR LOWER(TRIM(category_name)) LIKE '%water system%') OR LOWER(category_name) LIKE '%water%') ORDER BY category_name");
 $brands = mysqli_query($conn, "SELECT DISTINCT p.brand FROM products p
     INNER JOIN categories c ON c.category_id=p.category_id
     WHERE c.status=1 AND p.brand IS NOT NULL AND p.brand != ''
     AND (LOWER(c.category_name) LIKE '%inverter%' OR LOWER(c.category_name) LIKE '%battery%'
-    OR LOWER(c.category_name) LIKE '%ro%' OR LOWER(c.category_name) LIKE '%water%')
+    OR (LOWER(TRIM(c.category_name)) = 'ro' OR LOWER(TRIM(c.category_name)) LIKE 'ro %' OR LOWER(TRIM(c.category_name)) LIKE '% ro' OR LOWER(TRIM(c.category_name)) LIKE '%ro system%' OR LOWER(TRIM(c.category_name)) LIKE '%water purifier%' OR LOWER(TRIM(c.category_name)) = 'water' OR LOWER(TRIM(c.category_name)) LIKE '%water system%') OR LOWER(c.category_name) LIKE '%water%')
     ORDER BY p.brand");
 ?>
 <main class="products-section">
