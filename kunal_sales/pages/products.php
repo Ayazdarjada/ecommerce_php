@@ -28,8 +28,14 @@ if (!empty($_GET['brand'])) {
     $params[] = $_GET['brand'];
     $types .= "s";
 }
-$sql .= (!empty($_GET['sort']) && $_GET['sort'] === 'high')
-    ? " ORDER BY p.price DESC" : " ORDER BY p.product_id DESC";
+$sort = $_GET['sort'] ?? '';
+if ($sort === 'high') {
+    $sql .= " ORDER BY p.price DESC";
+} elseif ($sort === 'low') {
+    $sql .= " ORDER BY p.price ASC";
+} else {
+    $sql .= " ORDER BY p.product_id DESC";
+}
 
 $stmt = mysqli_prepare($conn, $sql);
 if (!empty($params)) {
