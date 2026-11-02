@@ -1,7 +1,7 @@
 <?php
 session_start();
 include '../config/db.php';
-include '../header.php';
+include '../header.php'; // Includes session and CSRF
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
@@ -58,7 +58,10 @@ $total = 0;
             Total: ₹<?php echo htmlspecialchars($total); ?>
         </div>
 
-        <a href="checkout.php" class="hero-btn">Checkout</a>
+        <form action="checkout.php" method="POST">
+            <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+            <button type="submit" class="hero-btn">Checkout</button>
+        </form>
 
     <?php } ?>
 

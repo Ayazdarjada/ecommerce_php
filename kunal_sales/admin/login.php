@@ -1,8 +1,12 @@
 <?php
 session_start();
 include '../config/db.php';
+include '../config/csrf.php';
 
 if (isset($_POST['login'])) {
+    if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+        die("CSRF token validation failed.");
+    }
 
     $username = $_POST['username'];
     $password = $_POST['password'];
@@ -13,6 +17,7 @@ if (isset($_POST['login'])) {
     $admin = $stmt->get_result()->fetch_assoc();
 
     if ($admin && password_verify($password, $admin['password'])) {
+        session_regenerate_id(true);
         $_SESSION['admin_id'] = $admin['admin_id'];
         header("Location: dashboard.php");
         exit;
@@ -26,11 +31,8 @@ if (isset($_POST['login'])) {
 <html>
 <head>
     <title>Admin Login</title>
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
-
-    <!-- ✅ LOGIN ALIGNMENT FIX -->
     <style>
         .admin-login-wrapper{
             min-height:100vh;
@@ -45,14 +47,15 @@ if (isset($_POST['login'])) {
 
 <div class="admin-login-wrapper">
 
-    <div class="auth-card">
+    <div class="auth-card" style="width: 350px; padding: 20px; background: white; border-radius: 8px;">
         <h2>Admin Login</h2>
 
         <?php if (isset($error)) { ?>
-            <div class="alert alert-danger"><?php echo $error; ?></div>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php } ?>
 
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
 
             <input
                 type="text"
@@ -73,10 +76,8 @@ if (isset($_POST['login'])) {
             <button type="submit" name="login" class="btn btn-dark w-100">
                 Login
             </button>
-
         </form>
     </div>
-
 </div>
 
 </body>
