@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/csrf.php';
+require_once __DIR__ . '/config/helpers.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 /* Auto base path detection */

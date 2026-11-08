@@ -69,9 +69,12 @@ function breakRow(btn){
         body: `id=${id}&csrf_token=${csrf}`
     })
     .then(res => {
-        if(!res.ok) alert("Action failed");
+        if(!res.ok) {
+            // The row was already animated away; tell the user why and bring it back
+            return res.text().then(t => { alert(t || "Action failed"); location.reload(); });
+        }
     })
-    .catch(() => alert("Action failed"));
+    .catch(() => { alert("Action failed"); location.reload(); });
 
   }, 300);
 

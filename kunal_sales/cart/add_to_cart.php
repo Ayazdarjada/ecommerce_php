@@ -3,12 +3,16 @@ session_start();
 include '../config/db.php';
 include '../config/csrf.php';
 
-if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../auth/login.php");   // guests: log in first
+    exit;
+}
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
     die("Unauthorized");
 }
 
 $user_id = $_SESSION['user_id'];
-$product_id = (int)$_POST['id'];
+$product_id = (int)($_POST['id'] ?? 0);
 
 // Check stock first
 $stmt_stock = mysqli_prepare($conn, "SELECT stock FROM products WHERE product_id = ?");

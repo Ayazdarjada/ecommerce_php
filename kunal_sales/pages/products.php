@@ -67,7 +67,7 @@ $brands = mysqli_query($conn, "SELECT DISTINCT brand FROM products WHERE brand I
         <?php while ($p = mysqli_fetch_assoc($q)) { ?>
             <div class="product-card">
                 <a href="product.php?id=<?= (int)$p['product_id'] ?>">
-                    <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
+                    <img src="<?= htmlspecialchars(productImage($p['image'], $basePath)) ?>" alt="<?= htmlspecialchars($p['product_name']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
                     <h3><?= htmlspecialchars($p['product_name']) ?></h3>
                 </a>
                 <p>Price: ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>

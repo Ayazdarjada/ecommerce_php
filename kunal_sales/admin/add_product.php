@@ -9,14 +9,14 @@ $cat_q = mysqli_query($conn, "SELECT category_id, category_name FROM categories 
 if (isset($_POST['add_product'])) {
     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) die("CSRF failure.");
 
-    $name        = $_POST['product_name'];
-    $category_id = (int) $_POST['category_id'];
-    $price       = (float) $_POST['price'];
-    $brand       = $_POST['brand'];
-    $warranty    = (int) $_POST['warranty_months'];
-    $stock       = (int) $_POST['stock'];
-    $specs       = $_POST['specs'];
-    $desc        = $_POST['description'];
+    $name        = trim($_POST['product_name'] ?? '');
+    $category_id = (int) ($_POST['category_id'] ?? 0);
+    $price       = (float) ($_POST['price'] ?? 0);
+    $brand       = trim($_POST['brand'] ?? '');
+    $warranty    = (int) ($_POST['warranty_months'] ?? 0);
+    $stock       = max(0, (int) ($_POST['stock'] ?? 0));
+    $specs       = $_POST['specs'] ?? '';
+    $desc        = $_POST['description'] ?? '';
 
     // IMAGE UPLOAD
     $upload_dir = "../uploads/";
@@ -27,7 +27,7 @@ if (isset($_POST['add_product'])) {
         $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) && $_FILES['image']['size'] <= 2 * 1024 * 1024) {
             $image_new = uniqid() . "." . $ext;
-            move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $image_new);
+            if (!move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $image_new)) $image_new = "";
         }
     }
 

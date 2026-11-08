@@ -19,9 +19,21 @@ $address = trim($_POST['address'] ?? '');
 $city = trim($_POST['city'] ?? '');
 $pincode = trim($_POST['pincode'] ?? '');
 $payment = $_POST['payment_method'] ?? 'COD';
+if (!in_array($payment, ['COD'], true)) $payment = 'COD';   // only COD supported
 
-if (empty($name) || empty($phone) || empty($address) || empty($city) || empty($pincode)) {
-    die("All fields are required.");
+$form_error = null;
+if ($name === '' || $phone === '' || $address === '' || $city === '' || $pincode === '') {
+    $form_error = "All fields are required.";
+} elseif (!preg_match('/^[0-9+\-\s]{7,15}$/', $phone)) {
+    $form_error = "Please enter a valid phone number.";
+} elseif (!preg_match('/^[0-9]{6}$/', $pincode)) {
+    $form_error = "Pincode must be 6 digits.";
+}
+if ($form_error !== null) {
+    include '../header.php';
+    echo "<div class='container mt-5'><div class='alert alert-danger'>" . htmlspecialchars($form_error) . "</div><a href='checkout_form.php' class='btn btn-primary'>Back to checkout</a></div>";
+    include '../footer.php';
+    exit;
 }
 
 mysqli_begin_transaction($conn);
@@ -42,7 +54,7 @@ try {
     $total = 0;
     $items = [];
     while ($row = mysqli_fetch_assoc($q)) {
-        if ($row['stock'] < $row['quantity']) throw new Exception("Insufficient stock for " . htmlspecialchars($row['product_name']));
+        if ($row['stock'] < $row['quantity']) throw new Exception("Insufficient stock for " . $row['product_name']);
         $total += $row['price'] * $row['quantity'];
         $items[] = $row;
     }
@@ -61,7 +73,7 @@ try {
 
         mysqli_stmt_bind_param($stmt_stock, 'iii', $item['quantity'], $item['product_id'], $item['quantity']);
         mysqli_stmt_execute($stmt_stock);
-        if (mysqli_stmt_affected_rows($stmt_stock) == 0) throw new Exception("Stock reduction failed for " . htmlspecialchars($item['product_name']));
+        if (mysqli_stmt_affected_rows($stmt_stock) == 0) throw new Exception("Stock reduction failed for " . $item['product_name']);
     }
 
     $stmt_clear = mysqli_prepare($conn, "DELETE FROM cart WHERE user_id=?");
@@ -74,8 +86,15 @@ try {
 
 } catch (Exception $e) {
     mysqli_rollback($conn);
+    // Business errors (stock/empty cart) are safe to show; DB errors are not.
+    if ($e instanceof mysqli_sql_exception) {
+        error_log('Checkout DB error: ' . $e->getMessage());
+        $msg = "Something went wrong while placing your order. Please try again.";
+    } else {
+        $msg = $e->getMessage();
+    }
     include '../header.php';
-    echo "<div class='container mt-5'><div class='alert alert-danger'>Checkout failed: " . htmlspecialchars($e->getMessage()) . "</div><a href='view_cart.php' class='btn btn-primary'>Back to Cart</a></div>";
+    echo "<div class='container mt-5'><div class='alert alert-danger'>Checkout failed: " . htmlspecialchars($msg) . "</div><a href='view_cart.php' class='btn btn-primary'>Back to Cart</a></div>";
     include '../footer.php';
 }
 ?>

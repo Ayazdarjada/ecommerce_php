@@ -1,17 +1,19 @@
 <?php
-include '../config/db.php';
-include '../header.php'; // Includes session and CSRF
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/csrf.php'; // starts session
 
 if (isset($_POST['register'])) {
     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
         die("CSRF token validation failed.");
     }
 
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $password = $_POST['password'];
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    if (strlen($password) < 8) {
+    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter your name and a valid email address.";
+    } elseif (strlen($password) < 8) {
         $error = "Password must be at least 8 characters long.";
     } else {
         // Check if email exists
@@ -34,6 +36,9 @@ if (isset($_POST['register'])) {
         }
     }
 }
+
+// Output starts here (after all possible redirects)
+include '../header.php';
 ?>
 
 <div class="auth-page">

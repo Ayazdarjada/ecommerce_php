@@ -1,20 +1,28 @@
 <?php
 include 'admin_header.php';
 include '../config/db.php';
+include '../config/csrf.php';
 
 if (isset($_POST['add_category'])) {
-    $category_name = trim($_POST['category_name']);
-    $status = $_POST['status'];
+    if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) die("CSRF failure.");
 
-    if ($category_name != '') {
-        mysqli_query($conn, "
-            INSERT INTO categories (category_name, status)
-            VALUES ('$category_name', '$status')
-        ");
+    $category_name = trim($_POST['category_name'] ?? '');
+    $status = (($_POST['status'] ?? '1') === '0') ? 0 : 1;
 
-        echo "<div class='alert alert-success'>Category Added Successfully</div>";
-    } else {
+    if ($category_name === '') {
         echo "<div class='alert alert-danger'>Category Name Required</div>";
+    } else {
+        $chk = mysqli_prepare($conn, "SELECT category_id FROM categories WHERE category_name = ?");
+        mysqli_stmt_bind_param($chk, 's', $category_name);
+        mysqli_stmt_execute($chk);
+        if (mysqli_stmt_get_result($chk)->num_rows > 0) {
+            echo "<div class='alert alert-warning'>That category already exists</div>";
+        } else {
+            $stmt = mysqli_prepare($conn, "INSERT INTO categories (category_name, status) VALUES (?, ?)");
+            mysqli_stmt_bind_param($stmt, 'si', $category_name, $status);
+            mysqli_stmt_execute($stmt);
+            echo "<div class='alert alert-success'>Category Added Successfully</div>";
+        }
     }
 }
 ?>
@@ -23,6 +31,7 @@ if (isset($_POST['add_category'])) {
 
 <div class="admin-form">
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
 
     <div class="mb-3">
         <label class="form-label">Category Name</label>

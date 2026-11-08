@@ -1,11 +1,12 @@
 <?php
-session_start();
-include '../header.php';
+require_once __DIR__ . '/../config/csrf.php'; // starts session
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../auth/login.php");
     exit;
 }
+
+include '../header.php';
 ?>
 
 <div class="success-page">
@@ -16,10 +17,10 @@ if (!isset($_SESSION['user_id'])) {
     <h1>Order Placed Successfully</h1>
 
     <p>
-      Thank you for shopping with  
+      Thank you for shopping with
       <strong>Kunal Sales & Services</strong>.
       <br>
-      Your order has been confirmed and is being processed.
+      Your order has been placed and is being processed.
     </p>
 
     <div class="success-actions">

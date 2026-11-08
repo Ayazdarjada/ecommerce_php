@@ -8,18 +8,18 @@ mysqli_stmt_bind_param($stmt, 'i', $product_id);
 mysqli_stmt_execute($stmt);
 $p = mysqli_stmt_get_result($stmt)->fetch_assoc();
 
-if (!$p) die("Product not found");
+if (!$p) { http_response_code(404); echo "<div class='container mt-5'><div class='alert alert-warning'>Product not found.</div><a href='products.php' class='btn btn-primary'>Back to products</a></div>"; include '../footer.php'; exit; }
 ?>
 
 <div class="container mt-5">
     <div class="row">
         <div class="col-md-6">
-            <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="img-fluid" alt="<?= htmlspecialchars($p['product_name']) ?>">
+            <img src="<?= htmlspecialchars(productImage($p['image'], $basePath)) ?>" class="img-fluid" alt="<?= htmlspecialchars($p['product_name']) ?>">
         </div>
         <div class="col-md-6">
             <h1><?= htmlspecialchars($p['product_name']) ?></h1>
             <p><strong>Brand:</strong> <?= htmlspecialchars($p['brand'] ?? 'N/A') ?></p>
-            <p><strong>Price:</strong> ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
+            <p><strong>Price:</strong> ₹<?= number_format((float)$p['price'], 2) ?></p>
             <p><strong>Warranty:</strong> <?= (int)($p['warranty_months'] ?? 0) ?> months</p>
             <p><strong>Description:</strong> <?= htmlspecialchars($p['description'] ?? '') ?></p>
             <p><strong>Specs:</strong> <?= htmlspecialchars($p['specs'] ?? '') ?></p>

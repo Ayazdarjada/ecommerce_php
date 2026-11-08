@@ -8,8 +8,8 @@ if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST' || !is
 }
 
 $user_id = $_SESSION['user_id'];
-$product_id = (int)$_POST['id'];
-$action = $_POST['action']; // 'increase', 'decrease', 'remove'
+$product_id = (int)($_POST['id'] ?? 0);
+$action = $_POST['action'] ?? ''; // 'increase', 'decrease', 'remove'
 
 if ($action === 'increase') {
     // Check stock

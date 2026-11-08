@@ -1,6 +1,6 @@
 <?php
-include '../config/db.php';
-include '../header.php'; // Includes session and CSRF
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/csrf.php'; // starts session
 
 if (isset($_POST['login'])) {
     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
@@ -25,6 +25,9 @@ if (isset($_POST['login'])) {
         $error = "Invalid email or password";
     }
 }
+
+// Output starts here (after all possible redirects)
+include '../header.php';
 ?>
 
 <div class="auth-page">

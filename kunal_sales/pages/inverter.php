@@ -18,10 +18,10 @@ $q = mysqli_stmt_get_result($stmt);
 ?>
 
 <div class="product-grid">
-<?php while ($p = mysqli_fetch_assoc($q)) { ?>
+<?php while ($p = mysqli_fetch_assoc($q)) { if ($p['stock'] <= 0) continue; ?>
   <div class="product-card">
 
-    <img src="../uploads/<?php echo htmlspecialchars($p['image']); ?>"
+    <img src="<?php echo htmlspecialchars(productImage($p['image'], $basePath)); ?>"
          style="width:100%; height:180px; object-fit:cover; border-radius:12px;">
 
     <h3 class="mt-3"><?php echo htmlspecialchars($p['product_name']); ?></h3>
