@@ -1,0 +1,1107 @@
+diff --git a/kunal_sales/admin/add_category.php b/kunal_sales/admin/add_category.php
+index 68b087a..a071280 100644
+--- a/kunal_sales/admin/add_category.php
++++ b/kunal_sales/admin/add_category.php
+@@ -1,20 +1,28 @@
+ <?php
+ include 'admin_header.php';
+ include '../config/db.php';
++include '../config/csrf.php';
+ 
+ if (isset($_POST['add_category'])) {
+-    $category_name = trim($_POST['category_name']);
+-    $status = $_POST['status'];
++    if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) die("CSRF failure.");
+ 
+-    if ($category_name != '') {
+-        mysqli_query($conn, "
+-            INSERT INTO categories (category_name, status)
+-            VALUES ('$category_name', '$status')
+-        ");
++    $category_name = trim($_POST['category_name'] ?? '');
++    $status = (($_POST['status'] ?? '1') === '0') ? 0 : 1;
+ 
+-        echo "<div class='alert alert-success'>Category Added Successfully</div>";
+-    } else {
++    if ($category_name === '') {
+         echo "<div class='alert alert-danger'>Category Name Required</div>";
++    } else {
++        $chk = mysqli_prepare($conn, "SELECT category_id FROM categories WHERE category_name = ?");
++        mysqli_stmt_bind_param($chk, 's', $category_name);
++        mysqli_stmt_execute($chk);
++        if (mysqli_stmt_get_result($chk)->num_rows > 0) {
++            echo "<div class='alert alert-warning'>That category already exists</div>";
++        } else {
++            $stmt = mysqli_prepare($conn, "INSERT INTO categories (category_name, status) VALUES (?, ?)");
++            mysqli_stmt_bind_param($stmt, 'si', $category_name, $status);
++            mysqli_stmt_execute($stmt);
++            echo "<div class='alert alert-success'>Category Added Successfully</div>";
++        }
+     }
+ }
+ ?>
+@@ -23,6 +31,7 @@ if (isset($_POST['add_category'])) {
+ 
+ <div class="admin-form">
+ <form method="POST">
++    <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+ 
+     <div class="mb-3">
+         <label class="form-label">Category Name</label>
+diff --git a/kunal_sales/admin/add_product.php b/kunal_sales/admin/add_product.php
+index e820f34..ee766a6 100644
+--- a/kunal_sales/admin/add_product.php
++++ b/kunal_sales/admin/add_product.php
+@@ -9,14 +9,14 @@ $cat_q = mysqli_query($conn, "SELECT category_id, category_name FROM categories
+ if (isset($_POST['add_product'])) {
+     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) die("CSRF failure.");
+ 
+-    $name        = $_POST['product_name'];
+-    $category_id = (int) $_POST['category_id'];
+-    $price       = (float) $_POST['price'];
+-    $brand       = $_POST['brand'];
+-    $warranty    = (int) $_POST['warranty_months'];
+-    $stock       = (int) $_POST['stock'];
+-    $specs       = $_POST['specs'];
+-    $desc        = $_POST['description'];
++    $name        = trim($_POST['product_name'] ?? '');
++    $category_id = (int) ($_POST['category_id'] ?? 0);
++    $price       = (float) ($_POST['price'] ?? 0);
++    $brand       = trim($_POST['brand'] ?? '');
++    $warranty    = (int) ($_POST['warranty_months'] ?? 0);
++    $stock       = max(0, (int) ($_POST['stock'] ?? 0));
++    $specs       = $_POST['specs'] ?? '';
++    $desc        = $_POST['description'] ?? '';
+ 
+     // IMAGE UPLOAD
+     $upload_dir = "../uploads/";
+@@ -27,7 +27,7 @@ if (isset($_POST['add_product'])) {
+         $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) && $_FILES['image']['size'] <= 2 * 1024 * 1024) {
+             $image_new = uniqid() . "." . $ext;
+-            move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $image_new);
++            if (!move_uploaded_file($_FILES['image']['tmp_name'], $upload_dir . $image_new)) $image_new = "";
+         }
+     }
+ 
+diff --git a/kunal_sales/admin/admin_footer.php b/kunal_sales/admin/admin_footer.php
+index ce16da1..c2c0681 100644
+--- a/kunal_sales/admin/admin_footer.php
++++ b/kunal_sales/admin/admin_footer.php
+@@ -69,9 +69,12 @@ function breakRow(btn){
+         body: `id=${id}&csrf_token=${csrf}`
+     })
+     .then(res => {
+-        if(!res.ok) alert("Action failed");
++        if(!res.ok) {
++            // The row was already animated away; tell the user why and bring it back
++            return res.text().then(t => { alert(t || "Action failed"); location.reload(); });
++        }
+     })
+-    .catch(() => alert("Action failed"));
++    .catch(() => { alert("Action failed"); location.reload(); });
+ 
+   }, 300);
+ 
+diff --git a/kunal_sales/admin/delete_category.php b/kunal_sales/admin/delete_category.php
+index fef749b..58d44d0 100644
+--- a/kunal_sales/admin/delete_category.php
++++ b/kunal_sales/admin/delete_category.php
+@@ -4,15 +4,21 @@ include '../config/db.php';
+ include '../config/csrf.php';
+ 
+ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && verifyToken($_POST['csrf_token'])) {
+-    $id = $_POST['id'];
+-    
++    $id = (int)($_POST['id'] ?? 0);
++
++    $chk = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM products WHERE category_id = ?");
++    mysqli_stmt_bind_param($chk, 'i', $id);
++    mysqli_stmt_execute($chk);
++    $n = (int)mysqli_stmt_get_result($chk)->fetch_assoc()['c'];
++    if ($n > 0) {
++        http_response_code(409);
++        echo "Can't delete: $n product(s) still use this category. Move or delete them first, or just deactivate the category.";
++        exit;
++    }
++
+     $stmt = mysqli_prepare($conn, "DELETE FROM categories WHERE category_id=?");
+     mysqli_stmt_bind_param($stmt, 'i', $id);
+     mysqli_stmt_execute($stmt);
+-    
+-    header("Location: manage_categories.php");
+-    exit;
+ }
+ header("Location: manage_categories.php");
+ exit;
+-?>
+diff --git a/kunal_sales/admin/delete_product.php b/kunal_sales/admin/delete_product.php
+index ba115d0..4cdf051 100644
+--- a/kunal_sales/admin/delete_product.php
++++ b/kunal_sales/admin/delete_product.php
+@@ -4,31 +4,37 @@ include '../config/db.php';
+ include '../config/csrf.php';
+ 
+ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && verifyToken($_POST['csrf_token'])) {
+-    $id = (int)$_POST['id'];
+-    
+-    // Fetch image filename first
++    $id = (int)($_POST['id'] ?? 0);
++
++    // Products that appear in past orders must stay (order history needs them).
++    $chk = mysqli_prepare($conn, "SELECT COUNT(*) AS c FROM order_items WHERE product_id = ?");
++    mysqli_stmt_bind_param($chk, 'i', $id);
++    mysqli_stmt_execute($chk);
++    $used = (int)mysqli_stmt_get_result($chk)->fetch_assoc()['c'];
++    if ($used > 0) {
++        http_response_code(409);
++        echo "Can't delete: this product is part of $used past order item(s). Set its stock to 0 instead (Edit).";
++        exit;
++    }
++
+     $stmt_fetch = mysqli_prepare($conn, "SELECT image FROM products WHERE product_id = ?");
+     mysqli_stmt_bind_param($stmt_fetch, 'i', $id);
+     mysqli_stmt_execute($stmt_fetch);
+-    $res = mysqli_stmt_get_result($stmt_fetch);
+-    $product = mysqli_fetch_assoc($res);
+-    
+-    // Delete DB row
++    $product = mysqli_stmt_get_result($stmt_fetch)->fetch_assoc();
++
++    // Remove it from any carts first, then the product itself
++    $stmt_cart = mysqli_prepare($conn, "DELETE FROM cart WHERE product_id = ?");
++    mysqli_stmt_bind_param($stmt_cart, 'i', $id);
++    mysqli_stmt_execute($stmt_cart);
++
+     $stmt = mysqli_prepare($conn, "DELETE FROM products WHERE product_id = ?");
+     mysqli_stmt_bind_param($stmt, 'i', $id);
+     mysqli_stmt_execute($stmt);
+-    
+-    // Unlink image file if exists
++
+     if ($product && !empty($product['image'])) {
+-        $image_path = "../uploads/" . $product['image'];
+-        if (file_exists($image_path)) {
+-            unlink($image_path);
+-        }
++        $image_path = "../uploads/" . basename($product['image']);
++        if (is_file($image_path)) unlink($image_path);
+     }
+-    
+-    header("Location: manage_products.php");
+-    exit;
+ }
+ header("Location: manage_products.php");
+ exit;
+-?>
+diff --git a/kunal_sales/admin/edit_product.php b/kunal_sales/admin/edit_product.php
+index d188129..577e2f7 100644
+--- a/kunal_sales/admin/edit_product.php
++++ b/kunal_sales/admin/edit_product.php
+@@ -1,57 +1,76 @@
+ <?php
+-include 'admin_header.php';
++include 'admin_auth.php';              // session + admin check, no output
+ include '../config/db.php';
+ include '../config/csrf.php';
+ 
+ $id = (int)($_GET['id'] ?? 0);
++
++/* Load product first so we can 404/redirect before any HTML is printed */
++$stmt = mysqli_prepare($conn, "SELECT * FROM products WHERE product_id=?");
++mysqli_stmt_bind_param($stmt, 'i', $id);
++mysqli_stmt_execute($stmt);
++$p = mysqli_stmt_get_result($stmt)->fetch_assoc();
++if (!$p) {
++    header("Location: manage_products.php");
++    exit;
++}
++
++$error = null;
+ if (isset($_POST['update_product'])) {
+     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) die("CSRF failure.");
+ 
+-    $name = $_POST['product_name'];
+-    $cat_id = (int)$_POST['category_id'];
+-    $price = (float)$_POST['price'];
+-    $brand = $_POST['brand'];
+-    $warranty = (int)$_POST['warranty_months'];
+-    $stock = (int)$_POST['stock'];
+-    $specs = $_POST['specs'];
+-    $desc = $_POST['description'];
++    $name     = trim($_POST['product_name'] ?? '');
++    $cat_id   = (int)($_POST['category_id'] ?? 0);
++    $price    = (float)($_POST['price'] ?? 0);
++    $brand    = trim($_POST['brand'] ?? '');
++    $warranty = (int)($_POST['warranty_months'] ?? 0);
++    $stock    = max(0, (int)($_POST['stock'] ?? 0));
++    $specs    = $_POST['specs'] ?? '';
++    $desc     = $_POST['description'] ?? '';
+ 
+-    $image_new = $_POST['old_image'];
+-    if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
+-        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+-        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+-            $image_new = uniqid() . "." . $ext;
+-            move_uploaded_file($_FILES['image']['tmp_name'], "../uploads/" . $image_new);
+-            if (!empty($_POST['old_image']) && file_exists("../uploads/".$_POST['old_image'])) unlink("../uploads/".$_POST['old_image']);
++    if ($name === '' || $price < 0) {
++        $error = "Product name is required and price can't be negative.";
++    } else {
++        // Keep the DB's current image unless a valid new one is uploaded
++        // (never trust the old_image value coming from the form)
++        $image_new = $p['image'];
++        if (isset($_FILES['image']) && $_FILES['image']['error'] === 0) {
++            $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
++            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp']) && $_FILES['image']['size'] <= 2 * 1024 * 1024) {
++                $candidate = uniqid() . "." . $ext;
++                if (move_uploaded_file($_FILES['image']['tmp_name'], "../uploads/" . $candidate)) {
++                    $old = basename((string)$p['image']);
++                    if ($old !== '' && is_file("../uploads/" . $old)) unlink("../uploads/" . $old);
++                    $image_new = $candidate;
++                }
++            }
+         }
+-    }
+ 
+-    $stmt = mysqli_prepare($conn, "UPDATE products SET product_name=?, category_id=?, price=?, brand=?, warranty_months=?, stock=?, specs=?, description=?, image=? WHERE product_id=?");
+-    mysqli_stmt_bind_param($stmt, 'sidsiisssi', $name, $cat_id, $price, $brand, $warranty, $stock, $specs, $desc, $image_new, $id);
+-    mysqli_stmt_execute($stmt);
+-    header("Location: manage_products.php"); exit;
++        $stmt = mysqli_prepare($conn, "UPDATE products SET product_name=?, category_id=?, price=?, brand=?, warranty_months=?, stock=?, specs=?, description=?, image=? WHERE product_id=?");
++        mysqli_stmt_bind_param($stmt, 'sidsiisssi', $name, $cat_id, $price, $brand, $warranty, $stock, $specs, $desc, $image_new, $id);
++        mysqli_stmt_execute($stmt);
++        header("Location: manage_products.php");
++        exit;
++    }
+ }
+ 
+-$stmt = mysqli_prepare($conn, "SELECT * FROM products WHERE product_id=?");
+-mysqli_stmt_bind_param($stmt, 'i', $id);
+-mysqli_stmt_execute($stmt);
+-$p = mysqli_stmt_get_result($stmt)->fetch_assoc();
+-$cat_q = mysqli_query($conn, "SELECT category_id, category_name FROM categories");
++$cat_q = mysqli_query($conn, "SELECT category_id, category_name FROM categories ORDER BY category_name ASC");
++include 'admin_header.php';             // HTML output starts only now
+ ?>
+ <h2>Edit Product</h2>
++<?php if ($error) echo "<div class='alert alert-danger'>".htmlspecialchars($error)."</div>"; ?>
+ <form method="POST" enctype="multipart/form-data">
+     <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+-    <input type="hidden" name="old_image" value="<?= htmlspecialchars($p['image']) ?>">
+     <input type="text" name="product_name" value="<?= htmlspecialchars($p['product_name']) ?>" class="form-control mb-2" required>
+     <select name="category_id" class="form-select mb-2">
+         <?php while ($cat = mysqli_fetch_assoc($cat_q)) echo "<option value='{$cat['category_id']}' ".($p['category_id']==$cat['category_id']?'selected':'').">".htmlspecialchars($cat['category_name'])."</option>"; ?>
+     </select>
+     <input type="number" step="0.01" name="price" value="<?= (float)$p['price'] ?>" class="form-control mb-2" required>
+-    <input type="text" name="brand" value="<?= htmlspecialchars($p['brand']) ?>" class="form-control mb-2">
++    <input type="text" name="brand" value="<?= htmlspecialchars((string)$p['brand']) ?>" class="form-control mb-2">
+     <input type="number" name="warranty_months" value="<?= (int)$p['warranty_months'] ?>" class="form-control mb-2">
+     <input type="number" name="stock" value="<?= (int)$p['stock'] ?>" class="form-control mb-2" required>
+-    <textarea name="specs" class="form-control mb-2"><?= htmlspecialchars($p['specs']) ?></textarea>
+-    <textarea name="description" class="form-control mb-2"><?= htmlspecialchars($p['description']) ?></textarea>
++    <textarea name="specs" class="form-control mb-2"><?= htmlspecialchars((string)$p['specs']) ?></textarea>
++    <textarea name="description" class="form-control mb-2"><?= htmlspecialchars((string)$p['description']) ?></textarea>
+     <input type="file" name="image" class="form-control mb-2">
+     <button type="submit" name="update_product" class="btn btn-primary">Update</button>
+ </form>
+diff --git a/kunal_sales/admin/order_details.php b/kunal_sales/admin/order_details.php
+index 6fc2e1b..95f5d01 100644
+--- a/kunal_sales/admin/order_details.php
++++ b/kunal_sales/admin/order_details.php
+@@ -4,55 +4,85 @@ include '../config/db.php';
+ include '../config/csrf.php';
+ 
+ $order_id = (int)($_GET['id'] ?? 0);
++$allowed_statuses = ['Pending', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
++$flash = null;
+ 
+ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && verifyToken($_POST['csrf_token'])) {
+-    $new_status = $_POST['status'];
+-    
+-    // Get current status
++    $new_status = $_POST['status'] ?? '';
++
+     $stmt_curr = mysqli_prepare($conn, "SELECT status FROM orders WHERE order_id = ?");
+     mysqli_stmt_bind_param($stmt_curr, 'i', $order_id);
+     mysqli_stmt_execute($stmt_curr);
+-    $old_status = mysqli_stmt_get_result($stmt_curr)->fetch_assoc()['status'];
++    $cur = mysqli_stmt_get_result($stmt_curr)->fetch_assoc();
++
++    if (!$cur) {
++        $flash = ['danger', 'Order not found.'];
++    } elseif (!in_array($new_status, $allowed_statuses, true)) {
++        $flash = ['danger', 'Invalid status.'];
++    } elseif ($cur['status'] === 'Cancelled') {
++        // Cancelled is final: re-opening it would require re-deducting stock
++        // (and toggling back and forth used to inflate stock).
++        $flash = ['warning', 'A cancelled order cannot be changed.'];
++    } elseif ($new_status === 'Cancelled' && !in_array($cur['status'], ['Pending', 'Confirmed'], true)) {
++        $flash = ['warning', 'Only Pending or Confirmed orders can be cancelled.'];
++    } elseif ($new_status !== $cur['status']) {
++        mysqli_begin_transaction($conn);
++        try {
++            // Compare-and-set on the old status so two admins can't both restore stock
++            $stmt_upd = mysqli_prepare($conn, "UPDATE orders SET status = ? WHERE order_id = ? AND status = ?");
++            mysqli_stmt_bind_param($stmt_upd, 'sis', $new_status, $order_id, $cur['status']);
++            mysqli_stmt_execute($stmt_upd);
+ 
+-    mysqli_begin_transaction($conn);
+-    try {
+-        $stmt_upd = mysqli_prepare($conn, "UPDATE orders SET status = ? WHERE order_id = ?");
+-        mysqli_stmt_bind_param($stmt_upd, 'si', $new_status, $order_id);
+-        mysqli_stmt_execute($stmt_upd);
++            if (mysqli_stmt_affected_rows($stmt_upd) === 1) {
++                if ($new_status === 'Cancelled') {
++                    $stmt_items = mysqli_prepare($conn, "SELECT product_id, quantity FROM order_items WHERE order_id = ?");
++                    mysqli_stmt_bind_param($stmt_items, 'i', $order_id);
++                    mysqli_stmt_execute($stmt_items);
++                    $items = mysqli_stmt_get_result($stmt_items);
+ 
+-        // If moved to Cancelled from Pending/Confirmed, restore stock
+-        if ($new_status == 'Cancelled' && ($old_status == 'Pending' || $old_status == 'Confirmed')) {
+-            $stmt_items = mysqli_prepare($conn, "SELECT product_id, quantity FROM order_items WHERE order_id = ?");
+-            mysqli_stmt_bind_param($stmt_items, 'i', $order_id);
+-            mysqli_stmt_execute($stmt_items);
+-            $items = mysqli_stmt_get_result($stmt_items);
+-            
+-            $stmt_stock = mysqli_prepare($conn, "UPDATE products SET stock = stock + ? WHERE product_id = ?");
+-            while ($i = mysqli_fetch_assoc($items)) {
+-                mysqli_stmt_bind_param($stmt_stock, 'ii', $i['quantity'], $i['product_id']);
+-                mysqli_stmt_execute($stmt_stock);
++                    $stmt_stock = mysqli_prepare($conn, "UPDATE products SET stock = stock + ? WHERE product_id = ?");
++                    while ($i = mysqli_fetch_assoc($items)) {
++                        mysqli_stmt_bind_param($stmt_stock, 'ii', $i['quantity'], $i['product_id']);
++                        mysqli_stmt_execute($stmt_stock);
++                    }
++                }
++                mysqli_commit($conn);
++                $flash = ['success', 'Status updated to ' . $new_status . '.'];
++            } else {
++                mysqli_rollback($conn);
++                $flash = ['warning', 'Order was changed by someone else. Reloaded.'];
+             }
++        } catch (Exception $e) {
++            mysqli_rollback($conn);
++            error_log('Order status update failed: ' . $e->getMessage());
++            $flash = ['danger', 'Could not update the order.'];
+         }
+-        mysqli_commit($conn);
+-    } catch (Exception $e) { mysqli_rollback($conn); }
++    }
+ }
+ 
+ $stmt = mysqli_prepare($conn, "SELECT orders.*, users.name FROM orders JOIN users ON orders.user_id = users.user_id WHERE orders.order_id = ?");
+ mysqli_stmt_bind_param($stmt, 'i', $order_id);
+ mysqli_stmt_execute($stmt);
+ $o = mysqli_stmt_get_result($stmt)->fetch_assoc();
++
++if (!$o) {
++    echo "<div class='alert alert-warning'>Order not found.</div><a href='view_orders.php' class='btn btn-primary'>Back to orders</a>";
++    include 'admin_footer.php';
++    exit;
++}
+ ?>
+ <div class="admin-content">
+     <h2>Order #<?= (int)$o['order_id'] ?></h2>
++    <?php if ($flash) echo "<div class='alert alert-{$flash[0]}'>".htmlspecialchars($flash[1])."</div>"; ?>
+     <p>Customer: <?= htmlspecialchars($o['name']) ?> | Phone: <?= htmlspecialchars($o['phone']) ?></p>
+     <p>Address: <?= htmlspecialchars($o['address'].', '.$o['city'].'-'.$o['pincode']) ?> | Payment: <?= htmlspecialchars($o['payment_method']) ?></p>
+     
+     <form method="POST" class="mb-3">
+         <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+-        <select name="status" class="form-select d-inline-block w-auto">
++        <select name="status" class="form-select d-inline-block w-auto"<?= $o['status']==='Cancelled' ? ' disabled' : '' ?>>
+             <?php foreach(['Pending','Confirmed','Shipped','Delivered','Cancelled'] as $s) echo "<option ".($o['status']==$s?'selected':'').">$s</option>"; ?>
+         </select>
+-        <button type="submit" class="btn btn-primary">Update Status</button>
++        <button type="submit" class="btn btn-primary"<?= $o['status']==='Cancelled' ? ' disabled' : '' ?>>Update Status</button>
+     </form>
+     
+     <table class="table">
+@@ -61,9 +91,9 @@ $o = mysqli_stmt_get_result($stmt)->fetch_assoc();
+         mysqli_stmt_bind_param($stmt_items, 'i', $order_id);
+         mysqli_stmt_execute($stmt_items);
+         $items = mysqli_stmt_get_result($stmt_items);
+-        while ($i = mysqli_fetch_assoc($items)) echo "<tr><td>{$i['product_name']}</td><td>{$i['quantity']}</td><td>{$i['price']}</td></tr>";
++        while ($i = mysqli_fetch_assoc($items)) echo "<tr><td>".htmlspecialchars($i['product_name'])."</td><td>".(int)$i['quantity']."</td><td>₹".number_format((float)$i['price'], 2)."</td></tr>";
+         ?>
+     </table>
+-    <h3>Total: ₹<?= htmlspecialchars($o['total_amount']) ?></h3>
++    <h3>Total: ₹<?= number_format((float)$o['total_amount'], 2) ?></h3>
+ </div>
+ <?php include 'admin_footer.php'; ?>
+diff --git a/kunal_sales/auth/login.php b/kunal_sales/auth/login.php
+index 98de4c7..a2cbe83 100644
+--- a/kunal_sales/auth/login.php
++++ b/kunal_sales/auth/login.php
+@@ -1,6 +1,6 @@
+ <?php
+-include '../config/db.php';
+-include '../header.php'; // Includes session and CSRF
++require_once __DIR__ . '/../config/db.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
+ 
+ if (isset($_POST['login'])) {
+     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+@@ -25,6 +25,9 @@ if (isset($_POST['login'])) {
+         $error = "Invalid email or password";
+     }
+ }
++
++// Output starts here (after all possible redirects)
++include '../header.php';
+ ?>
+ 
+ <div class="auth-page">
+diff --git a/kunal_sales/auth/register.php b/kunal_sales/auth/register.php
+index d578f94..f164b25 100644
+--- a/kunal_sales/auth/register.php
++++ b/kunal_sales/auth/register.php
+@@ -1,17 +1,19 @@
+ <?php
+-include '../config/db.php';
+-include '../header.php'; // Includes session and CSRF
++require_once __DIR__ . '/../config/db.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
+ 
+ if (isset($_POST['register'])) {
+     if (!isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+         die("CSRF token validation failed.");
+     }
+ 
+-    $name = $_POST['name'];
+-    $email = $_POST['email'];
+-    $password = $_POST['password'];
++    $name = trim($_POST['name'] ?? '');
++    $email = trim($_POST['email'] ?? '');
++    $password = $_POST['password'] ?? '';
+ 
+-    if (strlen($password) < 8) {
++    if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
++        $error = "Please enter your name and a valid email address.";
++    } elseif (strlen($password) < 8) {
+         $error = "Password must be at least 8 characters long.";
+     } else {
+         // Check if email exists
+@@ -34,6 +36,9 @@ if (isset($_POST['register'])) {
+         }
+     }
+ }
++
++// Output starts here (after all possible redirects)
++include '../header.php';
+ ?>
+ 
+ <div class="auth-page">
+diff --git a/kunal_sales/cart/add_to_cart.php b/kunal_sales/cart/add_to_cart.php
+index 08bd559..db448ae 100644
+--- a/kunal_sales/cart/add_to_cart.php
++++ b/kunal_sales/cart/add_to_cart.php
+@@ -3,12 +3,16 @@ session_start();
+ include '../config/db.php';
+ include '../config/csrf.php';
+ 
+-if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
++if (!isset($_SESSION['user_id'])) {
++    header("Location: ../auth/login.php");   // guests: log in first
++    exit;
++}
++if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['csrf_token']) || !verifyToken($_POST['csrf_token'])) {
+     die("Unauthorized");
+ }
+ 
+ $user_id = $_SESSION['user_id'];
+-$product_id = (int)$_POST['id'];
++$product_id = (int)($_POST['id'] ?? 0);
+ 
+ // Check stock first
+ $stmt_stock = mysqli_prepare($conn, "SELECT stock FROM products WHERE product_id = ?");
+diff --git a/kunal_sales/cart/checkout.php b/kunal_sales/cart/checkout.php
+index 75102a9..33f5201 100644
+--- a/kunal_sales/cart/checkout.php
++++ b/kunal_sales/cart/checkout.php
+@@ -19,9 +19,21 @@ $address = trim($_POST['address'] ?? '');
+ $city = trim($_POST['city'] ?? '');
+ $pincode = trim($_POST['pincode'] ?? '');
+ $payment = $_POST['payment_method'] ?? 'COD';
++if (!in_array($payment, ['COD'], true)) $payment = 'COD';   // only COD supported
+ 
+-if (empty($name) || empty($phone) || empty($address) || empty($city) || empty($pincode)) {
+-    die("All fields are required.");
++$form_error = null;
++if ($name === '' || $phone === '' || $address === '' || $city === '' || $pincode === '') {
++    $form_error = "All fields are required.";
++} elseif (!preg_match('/^[0-9+\-\s]{7,15}$/', $phone)) {
++    $form_error = "Please enter a valid phone number.";
++} elseif (!preg_match('/^[0-9]{6}$/', $pincode)) {
++    $form_error = "Pincode must be 6 digits.";
++}
++if ($form_error !== null) {
++    include '../header.php';
++    echo "<div class='container mt-5'><div class='alert alert-danger'>" . htmlspecialchars($form_error) . "</div><a href='checkout_form.php' class='btn btn-primary'>Back to checkout</a></div>";
++    include '../footer.php';
++    exit;
+ }
+ 
+ mysqli_begin_transaction($conn);
+@@ -42,7 +54,7 @@ try {
+     $total = 0;
+     $items = [];
+     while ($row = mysqli_fetch_assoc($q)) {
+-        if ($row['stock'] < $row['quantity']) throw new Exception("Insufficient stock for " . htmlspecialchars($row['product_name']));
++        if ($row['stock'] < $row['quantity']) throw new Exception("Insufficient stock for " . $row['product_name']);
+         $total += $row['price'] * $row['quantity'];
+         $items[] = $row;
+     }
+@@ -61,7 +73,7 @@ try {
+ 
+         mysqli_stmt_bind_param($stmt_stock, 'iii', $item['quantity'], $item['product_id'], $item['quantity']);
+         mysqli_stmt_execute($stmt_stock);
+-        if (mysqli_stmt_affected_rows($stmt_stock) == 0) throw new Exception("Stock reduction failed for " . htmlspecialchars($item['product_name']));
++        if (mysqli_stmt_affected_rows($stmt_stock) == 0) throw new Exception("Stock reduction failed for " . $item['product_name']);
+     }
+ 
+     $stmt_clear = mysqli_prepare($conn, "DELETE FROM cart WHERE user_id=?");
+@@ -74,8 +86,15 @@ try {
+ 
+ } catch (Exception $e) {
+     mysqli_rollback($conn);
++    // Business errors (stock/empty cart) are safe to show; DB errors are not.
++    if ($e instanceof mysqli_sql_exception) {
++        error_log('Checkout DB error: ' . $e->getMessage());
++        $msg = "Something went wrong while placing your order. Please try again.";
++    } else {
++        $msg = $e->getMessage();
++    }
+     include '../header.php';
+-    echo "<div class='container mt-5'><div class='alert alert-danger'>Checkout failed: " . htmlspecialchars($e->getMessage()) . "</div><a href='view_cart.php' class='btn btn-primary'>Back to Cart</a></div>";
++    echo "<div class='container mt-5'><div class='alert alert-danger'>Checkout failed: " . htmlspecialchars($msg) . "</div><a href='view_cart.php' class='btn btn-primary'>Back to Cart</a></div>";
+     include '../footer.php';
+ }
+ ?>
+diff --git a/kunal_sales/cart/checkout_form.php b/kunal_sales/cart/checkout_form.php
+index 17aea40..f60b42a 100644
+--- a/kunal_sales/cart/checkout_form.php
++++ b/kunal_sales/cart/checkout_form.php
+@@ -1,21 +1,50 @@
+ <?php
+-session_start();
++require_once __DIR__ . '/../config/db.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
++
++if (!isset($_SESSION['user_id'])) {
++    header("Location: ../auth/login.php");
++    exit;
++}
++
++$user_id = (int)$_SESSION['user_id'];
++
++$stmt = mysqli_prepare($conn, "
++    SELECT COUNT(*) AS items, COALESCE(SUM(cart.quantity * products.price), 0) AS total
++    FROM cart JOIN products ON cart.product_id = products.product_id
++    WHERE cart.user_id = ?
++");
++mysqli_stmt_bind_param($stmt, 'i', $user_id);
++mysqli_stmt_execute($stmt);
++$summary = mysqli_stmt_get_result($stmt)->fetch_assoc();
++
++if ((int)$summary['items'] === 0) {
++    header("Location: view_cart.php");
++    exit;
++}
++
+ include '../header.php';
+ ?>
+ 
+-<div class="container mt-5">
++<div class="container mt-5" style="max-width:600px;">
+     <h2>Checkout</h2>
++    <p class="text-muted">Order total: <strong>₹<?= number_format((float)$summary['total'], 2) ?></strong></p>
++
+     <form action="checkout.php" method="POST">
+         <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+-        <input type="text" name="name" class="form-control mb-2" placeholder="Full Name" required>
+-        <input type="text" name="phone" class="form-control mb-2" placeholder="Phone" required>
++        <input type="text" name="name" class="form-control mb-2" placeholder="Full Name"
++               value="<?= htmlspecialchars($_SESSION['user_name'] ?? '') ?>" required>
++        <input type="tel" name="phone" class="form-control mb-2" placeholder="Phone (10 digits)"
++               pattern="[0-9+\-\s]{7,15}" required>
+         <textarea name="address" class="form-control mb-2" placeholder="Address" required></textarea>
+         <input type="text" name="city" class="form-control mb-2" placeholder="City" required>
+-        <input type="text" name="pincode" class="form-control mb-2" placeholder="Pincode" required>
+-        <select name="payment_method" class="form-select mb-2">
++        <input type="text" name="pincode" class="form-control mb-2" placeholder="Pincode (6 digits)"
++               pattern="[0-9]{6}" maxlength="6" required>
++        <select name="payment_method" class="form-select mb-3">
+             <option value="COD">Cash on Delivery</option>
+         </select>
+         <button type="submit" class="btn btn-primary">Place Order</button>
++        <a href="view_cart.php" class="btn btn-link">Back to cart</a>
+     </form>
+ </div>
+ <?php include '../footer.php'; ?>
+diff --git a/kunal_sales/cart/order_success.php b/kunal_sales/cart/order_success.php
+index 4732657..d6cc984 100644
+--- a/kunal_sales/cart/order_success.php
++++ b/kunal_sales/cart/order_success.php
+@@ -1,11 +1,12 @@
+ <?php
+-session_start();
+-include '../header.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
+ 
+ if (!isset($_SESSION['user_id'])) {
+     header("Location: ../auth/login.php");
+     exit;
+ }
++
++include '../header.php';
+ ?>
+ 
+ <div class="success-page">
+@@ -16,10 +17,10 @@ if (!isset($_SESSION['user_id'])) {
+     <h1>Order Placed Successfully</h1>
+ 
+     <p>
+-      Thank you for shopping with  
++      Thank you for shopping with
+       <strong>Kunal Sales & Services</strong>.
+       <br>
+-      Your order has been confirmed and is being processed.
++      Your order has been placed and is being processed.
+     </p>
+ 
+     <div class="success-actions">
+diff --git a/kunal_sales/cart/update_cart.php b/kunal_sales/cart/update_cart.php
+index 5737389..fe51883 100644
+--- a/kunal_sales/cart/update_cart.php
++++ b/kunal_sales/cart/update_cart.php
+@@ -8,8 +8,8 @@ if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST' || !is
+ }
+ 
+ $user_id = $_SESSION['user_id'];
+-$product_id = (int)$_POST['id'];
+-$action = $_POST['action']; // 'increase', 'decrease', 'remove'
++$product_id = (int)($_POST['id'] ?? 0);
++$action = $_POST['action'] ?? ''; // 'increase', 'decrease', 'remove'
+ 
+ if ($action === 'increase') {
+     // Check stock
+diff --git a/kunal_sales/cart/view_cart.php b/kunal_sales/cart/view_cart.php
+index 976d623..9e90715 100644
+--- a/kunal_sales/cart/view_cart.php
++++ b/kunal_sales/cart/view_cart.php
+@@ -1,27 +1,29 @@
+ <?php
+-session_start();
+-include '../config/db.php';
+-include '../header.php'; // Includes session and CSRF
++require_once __DIR__ . '/../config/db.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
+ 
+ if (!isset($_SESSION['user_id'])) {
+     header("Location: ../auth/login.php");
+     exit;
+ }
+ 
+-$user_id = $_SESSION['user_id'];
++$user_id = (int)$_SESSION['user_id'];
+ 
+-/* ✅ RUN QUERY */
+ $stmt = mysqli_prepare($conn, "
+-    SELECT cart.*, products.product_name, products.price 
++    SELECT cart.*, products.product_name, products.price, products.stock
+     FROM cart
+     JOIN products ON cart.product_id = products.product_id
+     WHERE cart.user_id = ?
++    ORDER BY cart.cart_id ASC
+ ");
+ mysqli_stmt_bind_param($stmt, 'i', $user_id);
+ mysqli_stmt_execute($stmt);
+ $q = mysqli_stmt_get_result($stmt);
+ 
+ $total = 0;
++$has_stock_problem = false;
++
++include '../header.php';
+ ?>
+ 
+ <div class="cart-page">
+@@ -37,15 +39,19 @@ $total = 0;
+         <?php while ($c = mysqli_fetch_assoc($q)) {
+             $subtotal = $c['price'] * $c['quantity'];
+             $total += $subtotal;
++            if ($c['quantity'] > $c['stock']) $has_stock_problem = true;
+         ?>
+             <div class="cart-item">
+               <div class="cart-item-info">
+                 <strong><?php echo htmlspecialchars($c['product_name']); ?></strong>
++                <?php if ($c['quantity'] > $c['stock']) { ?>
++                    <div class="text-danger small">Only <?= (int)$c['stock'] ?> in stock &mdash; please reduce quantity.</div>
++                <?php } ?>
+               </div>
+               <div class="cart-price">
+-                ₹<?php echo htmlspecialchars($subtotal); ?>
++                ₹<?= number_format($subtotal, 2) ?>
+               </div>
+-              
++
+               <form action="update_cart.php" method="POST" class="cart-actions">
+                   <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+                   <input type="hidden" name="id" value="<?= (int)$c['product_id'] ?>">
+@@ -58,13 +64,15 @@ $total = 0;
+         <?php } ?>
+ 
+         <div class="cart-total">
+-            Total: ₹<?php echo htmlspecialchars($total); ?>
++            Total: ₹<?= number_format($total, 2) ?>
+         </div>
+ 
+-        <form action="checkout.php" method="POST">
+-            <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+-            <button type="submit" class="hero-btn">Checkout</button>
+-        </form>
++        <?php if ($has_stock_problem) { ?>
++            <p class="text-danger">Fix the quantities above before checking out.</p>
++        <?php } else { ?>
++            <!-- Goes to the address form first; checkout.php needs those details -->
++            <a href="checkout_form.php" class="hero-btn">Proceed to Checkout</a>
++        <?php } ?>
+ 
+     <?php } ?>
+ 
+diff --git a/kunal_sales/config/csrf.php b/kunal_sales/config/csrf.php
+index 59e840c..ff77f8f 100644
+--- a/kunal_sales/config/csrf.php
++++ b/kunal_sales/config/csrf.php
+@@ -11,6 +11,7 @@ function generateToken() {
+ }
+ 
+ function verifyToken($token) {
+-    return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
++    return is_string($token)
++        && isset($_SESSION['csrf_token'])
++        && hash_equals($_SESSION['csrf_token'], $token);
+ }
+-?>
+diff --git a/kunal_sales/config/db.php b/kunal_sales/config/db.php
+index c983936..b555523 100644
+--- a/kunal_sales/config/db.php
++++ b/kunal_sales/config/db.php
+@@ -1,10 +1,16 @@
+ <?php
++// Database connection. Override with env vars (DB_HOST, DB_USER, DB_PASS, DB_NAME)
++// if your setup differs from the XAMPP defaults.
++$db_host = getenv('DB_HOST') ?: 'localhost';
++$db_user = getenv('DB_USER') ?: 'root';
++$db_pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
++$db_name = getenv('DB_NAME') ?: 'kunal_sales';
+ 
+-// Create database connection
+-$conn = mysqli_connect("localhost", "root", "", "kunal_sales");
+-
+-// Check connection
+-if (!$conn) {
+-    die("Database connection failed: " . mysqli_connect_error());
++try {
++    $conn = mysqli_connect($db_host, $db_user, $db_pass, $db_name);
++    mysqli_set_charset($conn, 'utf8mb4');
++} catch (mysqli_sql_exception $e) {
++    error_log('DB connection failed: ' . $e->getMessage());
++    http_response_code(500);
++    die('Database connection failed. Check config/db.php and that MySQL/MariaDB is running.');
+ }
+-?>
+diff --git a/kunal_sales/config/helpers.php b/kunal_sales/config/helpers.php
+new file mode 100644
+index 0000000..62396e6
+--- /dev/null
++++ b/kunal_sales/config/helpers.php
+@@ -0,0 +1,17 @@
++<?php
++/**
++ * Returns a usable <img src> for a product.
++ * Falls back to an inline placeholder when the product has no image
++ * or the uploaded file is missing (avoids broken-image icons).
++ */
++function productImage($image, $basePath = '../') {
++    $file = basename((string)$image);
++    if ($file !== '' && is_file(__DIR__ . '/../uploads/' . $file)) {
++        return $basePath . 'uploads/' . rawurlencode($file);
++    }
++    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">'
++         . '<rect width="100%" height="100%" fill="#e2e8f0"/>'
++         . '<text x="50%" y="50%" fill="#64748b" font-family="Arial" font-size="22" '
++         . 'text-anchor="middle" dominant-baseline="middle">No image</text></svg>';
++    return 'data:image/svg+xml;utf8,' . rawurlencode($svg);
++}
+diff --git a/kunal_sales/fix_schema.sql b/kunal_sales/fix_schema.sql
+new file mode 100644
+index 0000000..8b07035
+--- /dev/null
++++ b/kunal_sales/fix_schema.sql
+@@ -0,0 +1,83 @@
++-- =====================================================================
++-- fix_schema.sql  --  ONE script that brings the database up to date.
++-- Safe to run more than once, and safe whether or not you already ran
++-- migration_prompt_1.sql / products_update.sql / orders_update.sql /
++-- additional_features.sql (those four are now redundant).
++--
++-- Run order for a fresh DB:   kunal_sales.sql  ->  fix_schema.sql
++-- Requires MariaDB (XAMPP default). MySQL 8 does not support
++-- "ADD COLUMN IF NOT EXISTS".
++-- =====================================================================
++
++-- ---------- products ----------
++ALTER TABLE products
++  ADD COLUMN IF NOT EXISTS category_id INT NULL,
++  ADD COLUMN IF NOT EXISTS brand VARCHAR(100) NULL,
++  ADD COLUMN IF NOT EXISTS warranty_months INT NULL,
++  ADD COLUMN IF NOT EXISTS specs TEXT NULL,
++  ADD COLUMN IF NOT EXISTS stock INT NOT NULL DEFAULT 0;
++
++-- Map the old ENUM `category` to category_id.
++-- The old migration missed 'RO' because the category is named 'RO System'.
++UPDATE products p
++JOIN categories c
++  ON c.category_name = CASE p.category WHEN 'RO' THEN 'RO System' ELSE p.category END
++SET p.category_id = c.category_id
++WHERE p.category_id IS NULL AND p.category IS NOT NULL;
++
++ALTER TABLE products ADD INDEX IF NOT EXISTS idx_products_category (category_id);
++
++-- ---------- orders ----------
++ALTER TABLE orders
++  ADD COLUMN IF NOT EXISTS status ENUM('Pending','Confirmed','Shipped','Delivered','Cancelled') NOT NULL DEFAULT 'Pending',
++  ADD COLUMN IF NOT EXISTS phone VARCHAR(20) NULL,
++  ADD COLUMN IF NOT EXISTS address TEXT NULL,
++  ADD COLUMN IF NOT EXISTS city VARCHAR(100) NULL,
++  ADD COLUMN IF NOT EXISTS pincode VARCHAR(10) NULL,
++  ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) NOT NULL DEFAULT 'COD';
++
++-- ---------- tables from additional_features.sql (not used by the PHP yet) ----------
++CREATE TABLE IF NOT EXISTS service_requests (
++    id INT AUTO_INCREMENT PRIMARY KEY,
++    name VARCHAR(100) NOT NULL,
++    phone VARCHAR(20) NOT NULL,
++    address TEXT NOT NULL,
++    service_type ENUM('Inverter repair', 'Battery replacement', 'RO service', 'Installation') NOT NULL,
++    preferred_date DATE NOT NULL,
++    message TEXT,
++    status ENUM('Pending', 'In Progress', 'Completed') DEFAULT 'Pending',
++    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
++);
++
++CREATE TABLE IF NOT EXISTS wishlist (
++    user_id INT NOT NULL,
++    product_id INT NOT NULL,
++    PRIMARY KEY (user_id, product_id)
++);
++
++-- ---------- foreign keys ----------
++-- Deleting a product used to silently DELETE its rows from past orders
++-- (order_items ... ON DELETE CASCADE). Now it is blocked instead.
++ALTER TABLE order_items DROP FOREIGN KEY IF EXISTS order_items_ibfk_2;
++ALTER TABLE order_items
++  ADD CONSTRAINT order_items_ibfk_2 FOREIGN KEY (product_id)
++  REFERENCES products (product_id) ON DELETE RESTRICT;
++
++-- Deleting a product used to fail if it was sitting in anyone's cart.
++ALTER TABLE cart DROP FOREIGN KEY IF EXISTS cart_ibfk_2;
++ALTER TABLE cart
++  ADD CONSTRAINT cart_ibfk_2 FOREIGN KEY (product_id)
++  REFERENCES products (product_id) ON DELETE CASCADE;
++
++-- One cart row per (user, product): merge any duplicates first, then enforce it.
++UPDATE cart c
++JOIN (SELECT user_id, product_id, MIN(cart_id) AS keep_id, SUM(quantity) AS qty
++      FROM cart GROUP BY user_id, product_id HAVING COUNT(*) > 1) d
++  ON c.cart_id = d.keep_id
++SET c.quantity = d.qty;
++
++DELETE c1 FROM cart c1
++JOIN cart c2 ON c1.user_id = c2.user_id AND c1.product_id = c2.product_id
++            AND c1.cart_id > c2.cart_id;
++
++ALTER TABLE cart ADD UNIQUE INDEX IF NOT EXISTS uq_cart_user_product (user_id, product_id);
+diff --git a/kunal_sales/header.php b/kunal_sales/header.php
+index 91a3fbb..0d3d814 100644
+--- a/kunal_sales/header.php
++++ b/kunal_sales/header.php
+@@ -1,5 +1,6 @@
+ <?php
+ require_once __DIR__ . '/config/csrf.php';
++require_once __DIR__ . '/config/helpers.php';
+ if (session_status() === PHP_SESSION_NONE) { session_start(); }
+ 
+ /* Auto base path detection */
+diff --git a/kunal_sales/pages/inverter.php b/kunal_sales/pages/inverter.php
+index a9f9955..c184b0c 100644
+--- a/kunal_sales/pages/inverter.php
++++ b/kunal_sales/pages/inverter.php
+@@ -18,10 +18,10 @@ $q = mysqli_stmt_get_result($stmt);
+ ?>
+ 
+ <div class="product-grid">
+-<?php while ($p = mysqli_fetch_assoc($q)) { ?>
++<?php while ($p = mysqli_fetch_assoc($q)) { if ($p['stock'] <= 0) continue; ?>
+   <div class="product-card">
+ 
+-    <img src="../uploads/<?php echo htmlspecialchars($p['image']); ?>"
++    <img src="<?php echo htmlspecialchars(productImage($p['image'], $basePath)); ?>"
+          style="width:100%; height:180px; object-fit:cover; border-radius:12px;">
+ 
+     <h3 class="mt-3"><?php echo htmlspecialchars($p['product_name']); ?></h3>
+diff --git a/kunal_sales/pages/my_orders.php b/kunal_sales/pages/my_orders.php
+index 84d0f04..862e59d 100644
+--- a/kunal_sales/pages/my_orders.php
++++ b/kunal_sales/pages/my_orders.php
+@@ -1,32 +1,33 @@
+ <?php
+-session_start();
+-include '../config/db.php';
+-include '../config/csrf.php';
+-include '../header.php';
++require_once __DIR__ . '/../config/db.php';
++require_once __DIR__ . '/../config/csrf.php'; // starts session
+ 
+ if (!isset($_SESSION['user_id'])) {
+     header("Location: ../auth/login.php");
+     exit;
+ }
+ 
+-$user_id = $_SESSION['user_id'];
++$user_id = (int)$_SESSION['user_id'];
++
++/* Cancel a pending order (restores stock) */
++if ($_SERVER['REQUEST_METHOD'] === 'POST'
++    && ($_POST['action'] ?? '') === 'cancel'
++    && verifyToken($_POST['csrf_token'] ?? null)) {
+ 
+-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancel' && verifyToken($_POST['csrf_token'])) {
+-    $order_id = (int)$_POST['order_id'];
++    $order_id = (int)($_POST['order_id'] ?? 0);
+     mysqli_begin_transaction($conn);
+     try {
+-        // Try to update status only if currently Pending
++        // Only works while the order is still Pending and belongs to this user
+         $stmt_upd = mysqli_prepare($conn, "UPDATE orders SET status = 'Cancelled' WHERE order_id = ? AND user_id = ? AND status = 'Pending'");
+         mysqli_stmt_bind_param($stmt_upd, 'ii', $order_id, $user_id);
+         mysqli_stmt_execute($stmt_upd);
+-        
++
+         if (mysqli_stmt_affected_rows($stmt_upd) == 1) {
+-            // Restore stock
+             $stmt_items = mysqli_prepare($conn, "SELECT product_id, quantity FROM order_items WHERE order_id = ?");
+             mysqli_stmt_bind_param($stmt_items, 'i', $order_id);
+             mysqli_stmt_execute($stmt_items);
+             $items = mysqli_stmt_get_result($stmt_items);
+-            
++
+             $stmt_stock = mysqli_prepare($conn, "UPDATE products SET stock = stock + ? WHERE product_id = ?");
+             while ($i = mysqli_fetch_assoc($items)) {
+                 mysqli_stmt_bind_param($stmt_stock, 'ii', $i['quantity'], $i['product_id']);
+@@ -36,38 +37,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
+         } else {
+             mysqli_rollback($conn);
+         }
+-    } catch (Exception $e) { mysqli_rollback($conn); }
++    } catch (Exception $e) {
++        mysqli_rollback($conn);
++        error_log('Cancel order failed: ' . $e->getMessage());
++    }
++    // Post/Redirect/Get: a refresh must not re-submit the cancel
++    header("Location: my_orders.php");
++    exit;
+ }
+ 
+ $stmt = mysqli_prepare($conn, "SELECT * FROM orders WHERE user_id = ? ORDER BY order_date DESC");
+ mysqli_stmt_bind_param($stmt, 'i', $user_id);
+ mysqli_stmt_execute($stmt);
+ $orders = mysqli_stmt_get_result($stmt);
++
++$stmt_items = mysqli_prepare($conn, "SELECT oi.*, p.product_name FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = ?");
++
++include '../header.php';
+ ?>
+ 
+ <section class="cart-page">
+   <div class="cart-box">
+     <h2>My Orders</h2>
+-    <?php while ($o = mysqli_fetch_assoc($orders)) { 
++
++    <?php if (mysqli_num_rows($orders) === 0) { ?>
++        <p class="empty-cart-text">You haven't placed any orders yet.</p>
++        <a href="products.php" class="hero-btn">Shop Now</a>
++    <?php } ?>
++
++    <?php while ($o = mysqli_fetch_assoc($orders)) {
+         $badge_class = ($o['status'] == 'Pending') ? 'bg-warning' : (($o['status'] == 'Confirmed') ? 'bg-primary' : (($o['status'] == 'Shipped') ? 'bg-info' : (($o['status'] == 'Delivered') ? 'bg-success' : 'bg-danger')));
+     ?>
+         <div class="order-card border p-3 mb-3">
+             <p><strong>Order ID #<?= (int)$o['order_id'] ?></strong> | Status: <span class="badge <?= $badge_class ?>"><?= htmlspecialchars($o['status']) ?></span></p>
+-            <p>Total: ₹<?= htmlspecialchars($o['total_amount']) ?> | Date: <?= htmlspecialchars($o['order_date']) ?></p>
+-            
++            <p>Total: ₹<?= number_format((float)$o['total_amount'], 2) ?> | Date: <?= htmlspecialchars($o['order_date']) ?></p>
++
+             <h6>Items:</h6>
+             <?php
+-            $stmt_items = mysqli_prepare($conn, "SELECT oi.*, p.product_name FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE oi.order_id = ?");
+             mysqli_stmt_bind_param($stmt_items, 'i', $o['order_id']);
+             mysqli_stmt_execute($stmt_items);
+             $items = mysqli_stmt_get_result($stmt_items);
+-            while ($i = mysqli_fetch_assoc($items)) {
+-                echo "<p>{$i['product_name']} - {$i['quantity']} x ₹{$i['price']}</p>";
+-            }
+-            ?>
+-            
++            while ($i = mysqli_fetch_assoc($items)) { ?>
++                <p><?= htmlspecialchars($i['product_name']) ?> - <?= (int)$i['quantity'] ?> x ₹<?= number_format((float)$i['price'], 2) ?></p>
++            <?php } ?>
++
+             <?php if ($o['status'] == 'Pending') { ?>
+-                <form method="POST">
++                <form method="POST" onsubmit="return confirm('Cancel this order?');">
+                     <input type="hidden" name="csrf_token" value="<?= generateToken(); ?>">
+                     <input type="hidden" name="action" value="cancel">
+                     <input type="hidden" name="order_id" value="<?= (int)$o['order_id'] ?>">
+diff --git a/kunal_sales/pages/product.php b/kunal_sales/pages/product.php
+index b9be60c..3ebe3ba 100644
+--- a/kunal_sales/pages/product.php
++++ b/kunal_sales/pages/product.php
+@@ -8,18 +8,18 @@ mysqli_stmt_bind_param($stmt, 'i', $product_id);
+ mysqli_stmt_execute($stmt);
+ $p = mysqli_stmt_get_result($stmt)->fetch_assoc();
+ 
+-if (!$p) die("Product not found");
++if (!$p) { http_response_code(404); echo "<div class='container mt-5'><div class='alert alert-warning'>Product not found.</div><a href='products.php' class='btn btn-primary'>Back to products</a></div>"; include '../footer.php'; exit; }
+ ?>
+ 
+ <div class="container mt-5">
+     <div class="row">
+         <div class="col-md-6">
+-            <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="img-fluid" alt="<?= htmlspecialchars($p['product_name']) ?>">
++            <img src="<?= htmlspecialchars(productImage($p['image'], $basePath)) ?>" class="img-fluid" alt="<?= htmlspecialchars($p['product_name']) ?>">
+         </div>
+         <div class="col-md-6">
+             <h1><?= htmlspecialchars($p['product_name']) ?></h1>
+             <p><strong>Brand:</strong> <?= htmlspecialchars($p['brand'] ?? 'N/A') ?></p>
+-            <p><strong>Price:</strong> ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
++            <p><strong>Price:</strong> ₹<?= number_format((float)$p['price'], 2) ?></p>
+             <p><strong>Warranty:</strong> <?= (int)($p['warranty_months'] ?? 0) ?> months</p>
+             <p><strong>Description:</strong> <?= htmlspecialchars($p['description'] ?? '') ?></p>
+             <p><strong>Specs:</strong> <?= htmlspecialchars($p['specs'] ?? '') ?></p>
+diff --git a/kunal_sales/pages/products.php b/kunal_sales/pages/products.php
+index b2bcd04..bfdefae 100644
+--- a/kunal_sales/pages/products.php
++++ b/kunal_sales/pages/products.php
+@@ -67,7 +67,7 @@ $brands = mysqli_query($conn, "SELECT DISTINCT brand FROM products WHERE brand I
+         <?php while ($p = mysqli_fetch_assoc($q)) { ?>
+             <div class="product-card">
+                 <a href="product.php?id=<?= (int)$p['product_id'] ?>">
+-                    <img src="../uploads/<?= htmlspecialchars($p['image']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
++                    <img src="<?= htmlspecialchars(productImage($p['image'], $basePath)) ?>" alt="<?= htmlspecialchars($p['product_name']) ?>" class="product-img" style="width:100%; height:180px; object-fit:cover;">
+                     <h3><?= htmlspecialchars($p['product_name']) ?></h3>
+                 </a>
+                 <p>Price: ₹<?= htmlspecialchars(number_format($p['price'], 2)) ?></p>
